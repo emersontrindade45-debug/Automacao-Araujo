@@ -235,11 +235,11 @@ feat(M5): atualização de preços via áudio/texto e follow-up automático
 ### Entregas
 
 #### Variáveis de ambiente
-- [ ] Listar todas as variáveis de `.env.local` e configurar no Vercel (Production + Preview)
-- [ ] `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-- [ ] `RESEND_API_KEY`, `N8N_WEBHOOK_SECRET`
-- [ ] `WHATSAPP_TOKEN`, `WHATSAPP_VERIFY_TOKEN`, `INSTAGRAM_TOKEN`
-- [ ] `OPENAI_API_KEY`
+- [x] Listar todas as variáveis de `.env.local` e configurar no Vercel (Production + Preview)
+- [x] `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- [x] `RESEND_API_KEY`, `N8N_WEBHOOK_SECRET`
+- [x] `WHATSAPP_TOKEN`, `WHATSAPP_VERIFY_TOKEN`, `INSTAGRAM_TOKEN`
+- [x] `OPENAI_API_KEY`
 
 #### Banco de produção
 - [ ] Criar projeto Supabase de produção (separado do de desenvolvimento)
@@ -247,9 +247,9 @@ feat(M5): atualização de preços via áudio/texto e follow-up automático
 - [ ] Configurar RLS e validar com usuário de teste de produção
 
 #### Deploy
-- [ ] Conectar repositório ao Vercel
+- [x] Conectar repositório ao Vercel
 - [ ] Configurar domínio personalizado (se disponível)
-- [ ] Validar build de produção: `npm run build` sem erros e sem warnings críticos
+- [x] Validar build de produção: `npm run build` sem erros e sem warnings críticos
 - [ ] Testar fluxo completo em produção: receber mensagem WhatsApp → aparecer no Kanban → handoff → pedido
 
 #### Webhooks de produção
@@ -258,9 +258,9 @@ feat(M5): atualização de preços via áudio/texto e follow-up automático
 - [ ] Validar verificação de token em produção
 
 #### Monitoramento
-- [ ] Ativar logs do Vercel e configurar alertas de erro
-- [ ] Criar `app/api/health/route.ts` — endpoint `/api/health` retornando status do banco
-- [ ] Documentar em `docs/RUNBOOK.md`: como adicionar produto, como aprovar preço, como tratar handoff travado
+- [x] Ativar logs do Vercel e configurar alertas de erro
+- [x] Criar `app/api/health/route.ts` — endpoint `/api/health` retornando status do banco
+- [x] Documentar em `docs/RUNBOOK.md`: como adicionar produto, como aprovar preço, como tratar handoff travado
 
 #### Go-live checklist
 - [ ] Login funcionando com usuário real de cada papel

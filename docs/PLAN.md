@@ -105,34 +105,34 @@ feat(M2): interface CRM completa com dados mockados
 ### Entregas
 
 #### Banco de dados
-- [ ] Criar migração `supabase/migrations/001_schema_inicial.sql` com tabelas:
+- [x] Criar migração `supabase/migrations/001_schema_inicial.sql` com tabelas:
   - `clientes` (id, nome, telefone, canal_origem, etapa_atual, criado_em, atualizado_em)
   - `produtos` (id, nome, preco, unidade, ativo, criado_em)
   - `pedidos` (id, cliente_id, itens jsonb, status, endereco_entrega, metodo_pagamento, total, criado_em, atualizado_em)
   - `precos` (id, produto_id, preco_novo, status, solicitado_por, criado_em)
   - `logs` (id, tipo, payload jsonb, criado_em)
-- [ ] Criar migração `002_rls_policies.sql` com Row Level Security por papel (`Papel`)
-- [ ] Rodar `supabase db push` e validar tabelas no dashboard
-- [ ] Popular banco com seed de dados realistas para desenvolvimento
+- [x] Criar migração `002_rls_policies.sql` com Row Level Security por papel (`Papel`)
+- [x] Rodar `supabase db push` e validar tabelas no dashboard
+- [x] Popular banco com seed de dados realistas para desenvolvimento
 
 #### Autenticação
-- [ ] Configurar login com email/senha no Supabase Auth
-- [ ] Criar `app/(public)/login/page.tsx` com formulário de login
-- [ ] Criar `app/(public)/login/actions.ts` com Server Action de login
-- [ ] Redirecionar para `/kanban` após login bem-sucedido
-- [ ] Logout no `Header` via Server Action
-- [ ] Middleware já protege rotas — validar que redireciona para `/login` corretamente
+- [x] Configurar login com email/senha no Supabase Auth
+- [x] Criar `app/(public)/login/page.tsx` com formulário de login
+- [x] Criar `app/(public)/login/actions.ts` com Server Action de login
+- [x] Redirecionar para `/kanban` após login bem-sucedido
+- [x] Logout no `Header` via Server Action
+- [x] Middleware já protege rotas — validar que redireciona para `/login` corretamente
 
 #### Integração real
-- [ ] Substituir dados mock por Server Components com queries Supabase em todas as páginas
-- [ ] Implementar Supabase Realtime no `KanbanBoard` (atualização em tempo real de cards)
-- [ ] Criar `lib/supabase/queries/` com funções tipadas para cada entidade
-- [ ] Criar Server Actions em cada módulo para mutações (mover etapa, confirmar pedido, aprovar preço)
+- [x] Substituir dados mock por Server Components com queries Supabase em todas as páginas
+- [x] Implementar Supabase Realtime no `KanbanBoard` (atualização em tempo real de cards)
+- [x] Criar `lib/supabase/queries/` com funções tipadas para cada entidade
+- [x] Criar Server Actions em cada módulo para mutações (mover etapa, confirmar pedido, aprovar preço)
 
 #### Seed e testes manuais
-- [ ] Criar usuário de teste para cada `Papel` no Supabase Auth
-- [ ] Validar visibilidade de dados por papel via RLS
-- [ ] Garantir que `npm run build` passa sem erros
+- [x] Criar usuário de teste para cada `Papel` no Supabase Auth
+- [x] Validar visibilidade de dados por papel via RLS
+- [x] Garantir que `npm run build` passa sem erros
 
 **Commit final:**
 ```

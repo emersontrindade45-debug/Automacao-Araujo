@@ -1,19 +1,16 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PedidosList } from "@/components/pedidos/pedidos-list";
+import { mockPedidos, clienteNomes } from "@/lib/mock/pedidos";
 
-export const metadata = { title: "Pedidos" };
+export const metadata = { title: "Pedidos – Araujo Hub" };
 
 export default function PedidosPage() {
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-foreground">Pedidos</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de pedidos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted text-sm">Lista será implementada no M2.</p>
-        </CardContent>
-      </Card>
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-xl font-semibold text-foreground">Pedidos</h1>
+        <p className="text-sm text-muted mt-0.5">Acompanhe todos os pedidos em andamento</p>
+      </div>
+      <PedidosList pedidos={mockPedidos} clienteNomes={clienteNomes} />
     </div>
   );
 }

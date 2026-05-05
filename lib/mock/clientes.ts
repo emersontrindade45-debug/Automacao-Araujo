@@ -1,0 +1,160 @@
+import type { Cliente } from "@/lib/types";
+
+export const mockClientes: Cliente[] = [
+  {
+    id: "c1",
+    nome: "Maria da Silva",
+    telefone: "11987654321",
+    canal_origem: "whatsapp",
+    etapa_atual: "novo",
+    criado_em: "2026-04-28T08:00:00Z",
+    atualizado_em: "2026-04-28T08:00:00Z",
+  },
+  {
+    id: "c2",
+    nome: "João Ferreira",
+    telefone: "11912345678",
+    canal_origem: "instagram",
+    etapa_atual: "atendimento",
+    criado_em: "2026-04-27T14:30:00Z",
+    atualizado_em: "2026-04-28T09:15:00Z",
+  },
+  {
+    id: "c3",
+    nome: "Ana Rodrigues",
+    telefone: "21998765432",
+    canal_origem: "landpage",
+    etapa_atual: "fechamento",
+    criado_em: "2026-04-26T10:00:00Z",
+    atualizado_em: "2026-04-28T11:00:00Z",
+  },
+  {
+    id: "c4",
+    nome: "Carlos Oliveira",
+    telefone: "11934567890",
+    canal_origem: "whatsapp",
+    etapa_atual: "pedido_gerado",
+    criado_em: "2026-04-25T16:00:00Z",
+    atualizado_em: "2026-04-28T13:00:00Z",
+  },
+  {
+    id: "c5",
+    nome: "Patrícia Souza",
+    telefone: "31987654321",
+    canal_origem: "whatsapp",
+    etapa_atual: "separacao",
+    criado_em: "2026-04-24T09:00:00Z",
+    atualizado_em: "2026-04-28T14:00:00Z",
+  },
+  {
+    id: "c6",
+    nome: "Ricardo Lima",
+    telefone: "11956789012",
+    canal_origem: "instagram",
+    etapa_atual: "em_rota",
+    criado_em: "2026-04-23T11:30:00Z",
+    atualizado_em: "2026-04-28T15:00:00Z",
+  },
+  {
+    id: "c7",
+    nome: "Fernanda Costa",
+    telefone: "21945678901",
+    canal_origem: "landpage",
+    etapa_atual: "pos_venda",
+    criado_em: "2026-04-22T08:00:00Z",
+    atualizado_em: "2026-04-28T16:00:00Z",
+  },
+  {
+    id: "c8",
+    nome: "Marcos Almeida",
+    telefone: "11967890123",
+    canal_origem: "whatsapp",
+    etapa_atual: "follow_up",
+    criado_em: "2026-04-20T10:00:00Z",
+    atualizado_em: "2026-04-28T10:00:00Z",
+  },
+  {
+    id: "c9",
+    nome: "Juliana Pereira",
+    telefone: "31956789012",
+    canal_origem: "instagram",
+    etapa_atual: "marketing",
+    criado_em: "2026-04-15T14:00:00Z",
+    atualizado_em: "2026-04-28T09:00:00Z",
+  },
+  {
+    id: "c10",
+    nome: "Bruno Martins",
+    telefone: "11978901234",
+    canal_origem: "whatsapp",
+    etapa_atual: "novo",
+    criado_em: "2026-04-28T07:30:00Z",
+    atualizado_em: "2026-04-28T07:30:00Z",
+  },
+  {
+    id: "c11",
+    nome: "Camila Nascimento",
+    telefone: "21967890123",
+    canal_origem: "landpage",
+    etapa_atual: "atendimento",
+    criado_em: "2026-04-27T16:00:00Z",
+    atualizado_em: "2026-04-28T10:30:00Z",
+  },
+  {
+    id: "c12",
+    nome: "Eduardo Santos",
+    telefone: "11989012345",
+    canal_origem: "whatsapp",
+    etapa_atual: "fechamento",
+    criado_em: "2026-04-27T09:00:00Z",
+    atualizado_em: "2026-04-28T12:00:00Z",
+  },
+];
+
+export const mockHistorico: Record<string, { data: string; texto: string }[]> = {
+  c1: [
+    { data: "2026-04-28T08:00:00Z", texto: "Cliente entrou em contato via WhatsApp perguntando sobre preços de carne bovina." },
+    { data: "2026-04-28T08:05:00Z", texto: "Enviou lista de preços do açougue." },
+  ],
+  c2: [
+    { data: "2026-04-27T14:30:00Z", texto: "Mensagem recebida no Instagram: 'Vocês entregam na Vila Madalena?'" },
+    { data: "2026-04-27T14:45:00Z", texto: "Confirmou área de entrega. Cliente interessado em cesta básica semanal." },
+    { data: "2026-04-28T09:15:00Z", texto: "Atendente assumiu conversa para tirar dúvidas sobre produtos." },
+  ],
+  c3: [
+    { data: "2026-04-26T10:00:00Z", texto: "Lead captado via landpage. Nome: Ana Rodrigues, telefone: 21998765432." },
+    { data: "2026-04-26T10:30:00Z", texto: "Primeiro contato via WhatsApp. Apresentou cardápio da padaria." },
+    { data: "2026-04-28T11:00:00Z", texto: "Cliente enviou pedido detalhado. Em processo de fechamento." },
+  ],
+  c4: [
+    { data: "2026-04-25T16:00:00Z", texto: "Pedido confirmado via WhatsApp: 2kg frango, 1kg linguiça, 500g queijo." },
+    { data: "2026-04-28T13:00:00Z", texto: "Pedido gerado no sistema. Total: R$ 89,50." },
+  ],
+  c5: [
+    { data: "2026-04-24T09:00:00Z", texto: "Pedido em separação: 5 pães franceses, 200g presunto, 1L leite." },
+  ],
+  c6: [
+    { data: "2026-04-23T11:30:00Z", texto: "Pedido saiu para entrega. Previsão: 40 minutos." },
+  ],
+  c7: [
+    { data: "2026-04-22T08:00:00Z", texto: "Entrega realizada com sucesso. Cliente satisfeito." },
+    { data: "2026-04-22T16:00:00Z", texto: "Mensagem de agradecimento enviada." },
+  ],
+  c8: [
+    { data: "2026-04-20T10:00:00Z", texto: "Cliente sem resposta há 8 dias. Enviado mensagem de reativação." },
+  ],
+  c9: [
+    { data: "2026-04-15T14:00:00Z", texto: "Cliente sem resposta após 3 tentativas de follow-up. Movido para marketing." },
+  ],
+  c10: [
+    { data: "2026-04-28T07:30:00Z", texto: "Nova mensagem recebida via WhatsApp: 'Boa tarde, quero fazer um pedido.'" },
+  ],
+  c11: [
+    { data: "2026-04-27T16:00:00Z", texto: "Lead da landpage. Entrou em atendimento." },
+    { data: "2026-04-28T10:30:00Z", texto: "Atendente respondeu com cardápio completo." },
+  ],
+  c12: [
+    { data: "2026-04-27T09:00:00Z", texto: "Cliente pedindo orçamento para festa de aniversário." },
+    { data: "2026-04-28T12:00:00Z", texto: "Orçamento enviado. Aguardando confirmação." },
+  ],
+};

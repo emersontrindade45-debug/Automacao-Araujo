@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { mockClientes, mockHistorico } from "@/lib/mock/clientes";
-import { mockPedidos, clienteNomes } from "@/lib/mock/pedidos";
-import { EtapaBadge, CanalBadge, etapaLabels } from "@/components/ui/badge";
+import { getClienteById } from "@/lib/supabase/queries/clientes";
+import { getPedidosByCliente } from "@/lib/supabase/queries/pedidos";
+import { EtapaBadge, CanalBadge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClienteEtapaActions } from "@/components/clientes/cliente-etapa-actions";
@@ -35,28 +35,34 @@ function formatMoeda(v: number) {
 
 export async function generateMetadata({ params }: Props) {
   const { id } = await params;
-  const cliente = mockClientes.find((c) => c.id === id);
-  return { title: cliente ? `${cliente.nome} – Araujo Hub` : "Cliente – Araujo Hub" };
+  try {
+    const cliente = await getClienteById(id);
+    return { title: `${cliente.nome} – Araujo Hub` };
+  } catch {
+    return { title: "Cliente – Araujo Hub" };
+  }
 }
 
 export default async function ClienteDetalhe({ params }: Props) {
   const { id } = await params;
-  const cliente = mockClientes.find((c) => c.id === id);
-  if (!cliente) notFound();
 
-  const historico = mockHistorico[id] ?? [];
-  const pedidos = mockPedidos.filter((p) => p.cliente_id === id);
+  let cliente;
+  try {
+    cliente = await getClienteById(id);
+  } catch {
+    notFound();
+  }
+
+  const pedidos = await getPedidosByCliente(id);
 
   return (
     <div className="space-y-6 max-w-3xl">
-      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted">
         <Link href="/clientes" className="hover:text-foreground transition-colors">Clientes</Link>
         <span>/</span>
         <span className="text-foreground font-medium">{cliente.nome}</span>
       </div>
 
-      {/* Header card */}
       <Card>
         <CardContent className="pt-5">
           <div className="flex items-start gap-4">
@@ -88,14 +94,12 @@ export default async function ClienteDetalhe({ params }: Props) {
         </CardContent>
       </Card>
 
-      {/* Mover etapa */}
       <ClienteEtapaActions
         clienteId={cliente.id}
         etapaAtual={cliente.etapa_atual}
         etapas={ETAPAS}
       />
 
-      {/* Pedidos */}
       {pedidos.length > 0 && (
         <Card>
           <CardHeader>
@@ -122,25 +126,12 @@ export default async function ClienteDetalhe({ params }: Props) {
         </Card>
       )}
 
-      {/* Histórico */}
       <Card>
         <CardHeader>
           <CardTitle>Histórico</CardTitle>
         </CardHeader>
         <CardContent>
-          {historico.length === 0 ? (
-            <p className="text-sm text-muted">Nenhum registro ainda.</p>
-          ) : (
-            <ol className="relative border-l border-border space-y-5 pl-5">
-              {historico.map((item, i) => (
-                <li key={i} className="relative">
-                  <div className="absolute -left-[1.45rem] top-1 h-2.5 w-2.5 rounded-full bg-brand ring-2 ring-surface" />
-                  <p className="text-xs text-subtle mb-1">{formatData(item.data)}</p>
-                  <p className="text-sm text-foreground">{item.texto}</p>
-                </li>
-              ))}
-            </ol>
-          )}
+          <p className="text-sm text-muted">Histórico via logs será implementado no M4.</p>
         </CardContent>
       </Card>
     </div>

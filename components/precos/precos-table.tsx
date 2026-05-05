@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import type { StatusPreco } from "@/lib/types";
-import type { AtualizacaoPreco } from "@/lib/mock/produtos";
+import type { AtualizacaoPreco } from "@/lib/supabase/queries/precos";
+import { atualizarStatusPrecoAction } from "@/app/(crm)/precos/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -36,25 +37,18 @@ const statusVariant: Record<StatusPreco, string> = {
 export function PrecosTable({ atualizacoes: inicial }: PrecosTableProps) {
   const [items, setItems] = useState<AtualizacaoPreco[]>(inicial);
   const [filtro, setFiltro] = useState<StatusPreco | "">("");
+  const [pending, startTransition] = useTransition();
 
   const filtrados = filtro ? items.filter((i) => i.status === filtro) : items;
   const pendentes = items.filter((i) => i.status === "pendente").length;
 
-  function aprovar(id: string) {
-    setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, status: "aprovado" as StatusPreco } : i))
-    );
-  }
-
-  function rejeitar(id: string) {
-    setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, status: "rejeitado" as StatusPreco } : i))
-    );
+  function mudarStatus(id: string, status: StatusPreco) {
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, status } : i)));
+    startTransition(() => atualizarStatusPrecoAction(id, status));
   }
 
   return (
     <div className="space-y-4">
-      {/* Summary */}
       {pendentes > 0 && (
         <div className="flex items-center gap-2 p-3 bg-warning-bg border border-[var(--warning-border)] rounded-lg text-sm text-warning">
           <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -66,7 +60,6 @@ export function PrecosTable({ atualizacoes: inicial }: PrecosTableProps) {
         </div>
       )}
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-2">
         {(["", "pendente", "aprovado", "rejeitado"] as (StatusPreco | "")[]).map((s) => {
           const count = s ? items.filter((i) => i.status === s).length : items.length;
@@ -87,7 +80,6 @@ export function PrecosTable({ atualizacoes: inicial }: PrecosTableProps) {
         })}
       </div>
 
-      {/* Table */}
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -95,7 +87,6 @@ export function PrecosTable({ atualizacoes: inicial }: PrecosTableProps) {
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wide">Produto</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wide hidden sm:table-cell">Preço atual</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wide">Novo preço</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wide hidden md:table-cell">Solicitado por</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wide">Status</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wide hidden lg:table-cell">Data</th>
               <th className="px-4 py-3 w-32 text-right text-xs font-semibold text-muted uppercase tracking-wide">Ações</th>
@@ -104,26 +95,30 @@ export function PrecosTable({ atualizacoes: inicial }: PrecosTableProps) {
           <tbody>
             {filtrados.length === 0 && (
               <tr>
-                <td colSpan={7} className="text-center py-10 text-muted text-sm">
+                <td colSpan={6} className="text-center py-10 text-muted text-sm">
                   Nenhuma atualização encontrada.
                 </td>
               </tr>
             )}
             {filtrados.map((item) => {
-              const variacao = ((item.preco_novo - item.preco_atual) / item.preco_atual) * 100;
+              const precoAtual = item.produtos?.preco_atual ?? 0;
+              const variacao = precoAtual > 0
+                ? ((item.preco_novo - precoAtual) / precoAtual) * 100
+                : 0;
               return (
                 <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-subtle transition-colors">
-                  <td className="px-4 py-3 font-medium text-foreground">{item.produto_nome}</td>
-                  <td className="px-4 py-3 text-muted hidden sm:table-cell">{formatMoeda(item.preco_atual)}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">{item.produtos?.nome ?? "—"}</td>
+                  <td className="px-4 py-3 text-muted hidden sm:table-cell">{formatMoeda(precoAtual)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
                       <span className="font-semibold text-foreground">{formatMoeda(item.preco_novo)}</span>
-                      <span className={["text-xs font-medium", variacao > 0 ? "text-danger" : "text-success"].join(" ")}>
-                        {variacao > 0 ? "+" : ""}{variacao.toFixed(1)}%
-                      </span>
+                      {precoAtual > 0 && (
+                        <span className={["text-xs font-medium", variacao > 0 ? "text-danger" : "text-success"].join(" ")}>
+                          {variacao > 0 ? "+" : ""}{variacao.toFixed(1)}%
+                        </span>
+                      )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-muted hidden md:table-cell">{item.solicitado_por}</td>
                   <td className="px-4 py-3">
                     <Badge variant={statusVariant[item.status] as "warning" | "success" | "danger"}>
                       {statusLabel[item.status]}
@@ -133,10 +128,10 @@ export function PrecosTable({ atualizacoes: inicial }: PrecosTableProps) {
                   <td className="px-4 py-3 text-right">
                     {item.status === "pendente" && (
                       <div className="flex items-center justify-end gap-2">
-                        <Button size="sm" variant="secondary" onClick={() => rejeitar(item.id)}>
+                        <Button size="sm" variant="secondary" disabled={pending} onClick={() => mudarStatus(item.id, "rejeitado")}>
                           Rejeitar
                         </Button>
-                        <Button size="sm" variant="primary" onClick={() => aprovar(item.id)}>
+                        <Button size="sm" variant="primary" disabled={pending} onClick={() => mudarStatus(item.id, "aprovado")}>
                           Aprovar
                         </Button>
                       </div>

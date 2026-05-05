@@ -1,21 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useTransition } from "react";
 import type { Cliente, Etapa } from "@/lib/types";
 import { etapaLabels } from "@/components/ui/badge";
 import { KanbanCard } from "./kanban-card";
 import { KanbanPanel } from "./kanban-panel";
+import { createClient } from "@/lib/supabase/client";
+import { moverEtapaAction } from "@/app/(crm)/clientes/actions";
 
 const ETAPAS: Etapa[] = [
-  "novo",
-  "atendimento",
-  "fechamento",
-  "pedido_gerado",
-  "separacao",
-  "em_rota",
-  "pos_venda",
-  "follow_up",
-  "marketing",
+  "novo", "atendimento", "fechamento", "pedido_gerado",
+  "separacao", "em_rota", "pos_venda", "follow_up", "marketing",
 ];
 
 interface KanbanBoardProps {
@@ -26,6 +21,36 @@ export function KanbanBoard({ initialClientes }: KanbanBoardProps) {
   const [clientes, setClientes] = useState<Cliente[]>(initialClientes);
   const [selecionado, setSelecionado] = useState<Cliente | null>(null);
   const [draggingOver, setDraggingOver] = useState<Etapa | null>(null);
+  const [, startTransition] = useTransition();
+
+  // Realtime: sincroniza alterações de clientes feitas por outros usuários
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("clientes-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "clientes" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            setClientes((prev) => [payload.new as Cliente, ...prev]);
+          } else if (payload.eventType === "UPDATE") {
+            const updated = payload.new as Cliente;
+            setClientes((prev) =>
+              prev.map((c) => (c.id === updated.id ? updated : c))
+            );
+            setSelecionado((prev) => (prev?.id === updated.id ? updated : prev));
+          } else if (payload.eventType === "DELETE") {
+            const id = (payload.old as { id: string }).id;
+            setClientes((prev) => prev.filter((c) => c.id !== id));
+            setSelecionado((prev) => (prev?.id === id ? null : prev));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   function handleDragStart(e: React.DragEvent, clienteId: string, fromEtapa: Etapa) {
     e.dataTransfer.setData("clienteId", clienteId);
@@ -49,18 +74,14 @@ export function KanbanBoard({ initialClientes }: KanbanBoardProps) {
   }
 
   function moverCliente(clienteId: string, novaEtapa: Etapa) {
+    const now = new Date().toISOString();
     setClientes((prev) =>
-      prev.map((c) =>
-        c.id === clienteId
-          ? { ...c, etapa_atual: novaEtapa, atualizado_em: new Date().toISOString() }
-          : c
-      )
+      prev.map((c) => c.id === clienteId ? { ...c, etapa_atual: novaEtapa, atualizado_em: now } : c)
     );
-    if (selecionado?.id === clienteId) {
-      setSelecionado((prev) =>
-        prev ? { ...prev, etapa_atual: novaEtapa, atualizado_em: new Date().toISOString() } : null
-      );
-    }
+    setSelecionado((prev) =>
+      prev?.id === clienteId ? { ...prev, etapa_atual: novaEtapa, atualizado_em: now } : prev
+    );
+    startTransition(() => moverEtapaAction(clienteId, novaEtapa));
   }
 
   return (
@@ -77,7 +98,6 @@ export function KanbanBoard({ initialClientes }: KanbanBoardProps) {
               onDragLeave={() => setDraggingOver(null)}
               onDrop={(e) => handleDrop(e, etapa)}
             >
-              {/* Column header */}
               <div className="flex items-center justify-between mb-2 px-1">
                 <span className="text-xs font-semibold text-muted uppercase tracking-wide">
                   {etapaLabels[etapa]}
@@ -87,7 +107,6 @@ export function KanbanBoard({ initialClientes }: KanbanBoardProps) {
                 </span>
               </div>
 
-              {/* Drop zone */}
               <div
                 className={[
                   "flex flex-col gap-2 flex-1 rounded-xl p-2 min-h-32 transition-colors",

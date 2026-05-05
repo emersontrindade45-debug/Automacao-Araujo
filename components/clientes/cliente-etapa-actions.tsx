@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import type { Etapa } from "@/lib/types";
 import { EtapaBadge, etapaLabels } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { moverEtapaAction } from "@/app/(crm)/clientes/actions";
 
 interface ClienteEtapaActionsProps {
   clienteId: string;
@@ -14,8 +15,16 @@ interface ClienteEtapaActionsProps {
 
 export function ClienteEtapaActions({ clienteId, etapaAtual, etapas }: ClienteEtapaActionsProps) {
   const [etapa, setEtapa] = useState<Etapa>(etapaAtual);
+  const [pending, startTransition] = useTransition();
   const etapaIndex = etapas.indexOf(etapa);
   const proximaEtapa = etapaIndex < etapas.length - 1 ? etapas[etapaIndex + 1] : null;
+
+  function mover() {
+    if (!proximaEtapa) return;
+    const nova = proximaEtapa;
+    setEtapa(nova);
+    startTransition(() => moverEtapaAction(clienteId, nova));
+  }
 
   return (
     <Card>
@@ -26,11 +35,7 @@ export function ClienteEtapaActions({ clienteId, etapaAtual, etapas }: ClienteEt
         <div className="flex items-center justify-between flex-wrap gap-3">
           <EtapaBadge etapa={etapa} />
           {proximaEtapa && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setEtapa(proximaEtapa)}
-            >
+            <Button variant="secondary" size="sm" disabled={pending} onClick={mover}>
               Mover para {etapaLabels[proximaEtapa]}
             </Button>
           )}

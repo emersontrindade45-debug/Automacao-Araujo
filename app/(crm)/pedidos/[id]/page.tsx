@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { mockPedidos, clienteNomes } from "@/lib/mock/pedidos";
-import { mockClientes } from "@/lib/mock/clientes";
+import { getPedidoById } from "@/lib/supabase/queries/pedidos";
 import { PedidoDetalhe } from "@/components/pedidos/pedido-detalhe";
 
 interface Props {
@@ -10,39 +9,43 @@ interface Props {
 
 export async function generateMetadata({ params }: Props) {
   const { id } = await params;
-  const pedido = mockPedidos.find((p) => p.id === id);
-  const nome = pedido ? (clienteNomes[pedido.cliente_id] ?? "Pedido") : "Pedido";
-  return { title: `${nome} – Pedido – Araujo Hub` };
+  try {
+    const pedido = await getPedidoById(id);
+    const nome = pedido.clientes?.nome ?? "Pedido";
+    return { title: `${nome} – Pedido – Araujo Hub` };
+  } catch {
+    return { title: "Pedido – Araujo Hub" };
+  }
 }
 
 export default async function PedidoDetalhePage({ params }: Props) {
   const { id } = await params;
-  const pedido = mockPedidos.find((p) => p.id === id);
-  if (!pedido) notFound();
 
-  const clienteNome = clienteNomes[pedido.cliente_id];
-  const cliente = mockClientes.find((c) => c.id === pedido.cliente_id);
+  let pedido;
+  try {
+    pedido = await getPedidoById(id);
+  } catch {
+    notFound();
+  }
+
+  const clienteNome = pedido.clientes?.nome ?? "cliente";
 
   return (
     <div className="space-y-5 max-w-2xl">
-      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted">
         <Link href="/pedidos" className="hover:text-foreground transition-colors">Pedidos</Link>
         <span>/</span>
-        <span className="text-foreground font-medium">{clienteNome ?? "Pedido"}</span>
+        <span className="text-foreground font-medium">{clienteNome}</span>
       </div>
 
-      {/* Page header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-semibold text-foreground">
-            Pedido de {clienteNome ?? "cliente"}
+            Pedido de {clienteNome}
           </h1>
-          {cliente && (
-            <Link href={`/clientes/${cliente.id}`} className="text-sm text-brand hover:underline mt-0.5 inline-block">
-              Ver perfil do cliente →
-            </Link>
-          )}
+          <Link href={`/clientes/${pedido.cliente_id}`} className="text-sm text-brand hover:underline mt-0.5 inline-block">
+            Ver perfil do cliente →
+          </Link>
         </div>
       </div>
 

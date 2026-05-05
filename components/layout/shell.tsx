@@ -1,11 +1,10 @@
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
-import type { Papel } from "@/lib/types";
 
 interface ShellProps {
   children: React.ReactNode;
   userName?: string;
-  userPapel?: Papel;
+  userPapel?: string;
   precosPendentes?: number;
 }
 

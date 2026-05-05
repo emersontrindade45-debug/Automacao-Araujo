@@ -1,10 +1,13 @@
 import { PrecosTable } from "@/components/precos/precos-table";
-import { mockAtualizacoesPreco } from "@/lib/mock/produtos";
+import { getAtualizacoesPreco, countPrecosPendentes } from "@/lib/supabase/queries/precos";
 
 export const metadata = { title: "Preços – Araujo Hub" };
 
-export default function PrecosPage() {
-  const pendentes = mockAtualizacoesPreco.filter((a) => a.status === "pendente").length;
+export default async function PrecosPage() {
+  const [atualizacoes, pendentes] = await Promise.all([
+    getAtualizacoesPreco(),
+    countPrecosPendentes(),
+  ]);
 
   return (
     <div className="space-y-5">
@@ -20,7 +23,7 @@ export default function PrecosPage() {
           </span>
         )}
       </div>
-      <PrecosTable atualizacoes={mockAtualizacoesPreco} />
+      <PrecosTable atualizacoes={atualizacoes} />
     </div>
   );
 }

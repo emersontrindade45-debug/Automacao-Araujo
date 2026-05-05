@@ -31,11 +31,12 @@ export async function updateSession(request: NextRequest) {
 
   const isPublicRoute =
     request.nextUrl.pathname === "/" ||
+    request.nextUrl.pathname === "/login" ||
     request.nextUrl.pathname.startsWith("/api/");
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 

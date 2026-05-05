@@ -15,6 +15,7 @@
 | M4 | `feat/webhooks-e-handoff` | Webhooks, integração N8n e handoff | 4º |
 | M5 | `feat/precos-e-follow-up` | Atualização de preços e follow-up | 5º |
 | M6 | `feat/deploy` | Deploy, variáveis de ambiente e go-live | 6º |
+| M7 | `feat/n8n-flows` | Fluxos N8n com IA — atendimento, pedido, handoff, follow-up | 7º |
 
 ---
 
@@ -281,9 +282,103 @@ feat(M6): deploy em produção e go-live validado
 ```
 M1 (interface base) → M2 (CRM com mock) → M3 (banco + auth real)
       → M4 (webhooks + N8n) → M5 (preços + follow-up) → M6 (deploy)
+      → M7 (fluxos N8n com IA)  ← pode rodar em paralelo a M6
 ```
 
 > **Princípio:** interface antes de backend. Validar a experiência com dados mockados antes de investir em integrações. Cada milestone entrega valor independente e pode ser demonstrada ao cliente.
+>
+> **M7** depende das URLs de produção (geradas em M6), mas pode ser construído e testado localmente em paralelo ao deploy.
+
+---
+
+---
+
+## M7 — Fluxos N8n com IA
+
+**Branch:** `feat/n8n-flows`
+
+**Objetivo:** Configurar dentro do N8n todos os fluxos de automação com IA (GPT-4o) para atendimento completo — do recebimento da mensagem até o handoff estruturado de volta ao Hub, incluindo follow-up e notificação de preços.
+
+> **Pré-requisito:** M6 concluído (URLs de produção disponíveis). Pode ser desenvolvido localmente em paralelo a M6 usando `ngrok` ou equivalente.
+
+### Entregas
+
+#### Fluxo 1 — Atendimento Principal (WhatsApp / Instagram → IA → Resposta)
+
+- [ ] Criar workflow **"Atendimento Principal"** no N8n
+- [ ] **Nó Webhook (Trigger):** recebe payload do Hub após `/api/webhooks/whatsapp` ou `/api/webhooks/instagram` (Hub dispara evento ao N8n após upsert do cliente)
+- [ ] **Nó HTTP Request:** busca contexto do cliente no Supabase (`GET /rest/v1/clientes?telefone=eq.{{telefone}}&select=*`)
+- [ ] **Nó HTTP Request:** busca catálogo de produtos ativos (`GET /rest/v1/produtos?ativo=eq.true&select=nome,preco_atual,unidade`)
+- [ ] **Nó OpenAI Chat Model (GPT-4o):** system prompt contendo:
+  - Identidade da loja (nome, horário, endereço)
+  - Catálogo de produtos com preços (injetado dinamicamente)
+  - Etapa atual do cliente e histórico das últimas mensagens
+  - Instrução: identificar intenção e responder naturalmente como atendente
+  - Output estruturado: `{ resposta: string, intencao: "saudacao" | "consulta_preco" | "fazer_pedido" | "fora_escopo" | "humano" }`
+- [ ] **Nó Switch:** ramifica pelo campo `intencao` retornado pela IA
+- [ ] **Nó HTTP Request (Meta Graph API):** envia `resposta` ao cliente via WhatsApp ou Instagram (`POST https://graph.facebook.com/v19.0/{phone_number_id}/messages`)
+- [ ] **Nó Set:** registra `intencao` e `cliente_id` para uso nas ramificações seguintes
+
+#### Fluxo 2 — Fechamento de Pedido (coleta estruturada via IA)
+
+Acionado quando `intencao = "fazer_pedido"`:
+
+- [ ] Criar workflow **"Fechamento de Pedido"** (ou sub-fluxo do Fluxo 1)
+- [ ] **Nó OpenAI (GPT-4o com function calling):** conduz conversa em múltiplos turnos para coletar:
+  - Lista de itens e quantidades
+  - Endereço de entrega
+  - Forma de pagamento
+  - Observações
+  - Function: `confirmar_pedido({ itens, endereco, forma_pagamento, observacoes })`
+- [ ] **Nó IF:** verifica se todos os campos obrigatórios foram extraídos
+- [ ] **Nó HTTP Request:** chama `POST /api/webhooks/n8n` com body (ver exemplo no `docs/N8N.md`) — `tipo: "pedido_confirmado"` + `HandoffPayload` completo com itens, endereço e forma de pagamento
+- [ ] **Nó HTTP Request (Meta Graph API):** envia resumo do pedido ao cliente com confirmação
+
+#### Fluxo 3 — Handoff para Humano
+
+Acionado quando `intencao = "humano"` ou após N turnos sem conclusão:
+
+- [ ] **Nó HTTP Request:** chama `POST /api/webhooks/n8n` com `tipo: "ambiguo"` ou `tipo: "sem_resposta"`
+- [ ] **Nó HTTP Request (Meta Graph API):** envia mensagem padrão ao cliente: "Aguarde, um atendente irá continuar o seu atendimento em breve."
+
+#### Fluxo 4 — Follow-up Automático (Cron)
+
+- [ ] Criar workflow **"Follow-up Cron"** no N8n
+- [ ] **Nó Schedule Trigger:** configura execução diária (ex: 09:00, horário de Brasília)
+- [ ] **Nó HTTP Request:** chama `POST /api/followup` com header `x-cron-secret: {{CRON_SECRET}}`
+- [ ] **Nó IF:** verifica status da resposta (`ok: true`) e registra resultado
+- [ ] **Nó Set (erro):** registra falha no log interno do N8n caso o endpoint retorne erro
+
+#### Fluxo 5 — Notificação de Preço Aprovado
+
+Acionado quando Hub chama `N8N_WEBHOOK_PRICE_UPDATE_URL` (após aprovar preço):
+
+- [ ] Criar workflow **"Notificação de Preço"** no N8n
+- [ ] **Nó Webhook (Trigger):** recebe payload `{ tipo: "atualizacao_preco", produto_nome, preco_novo, solicitado_por }`
+- [ ] **Nó HTTP Request (Meta Graph API):** envia mensagem ao número de `solicitado_por` (telefone): `"✅ Preço de [produto] atualizado para R$ [valor] e já está ativo no sistema."`
+
+#### Configuração e Credenciais
+
+- [ ] Configurar credencial **OpenAI** no N8n (`API Key` → `OPENAI_API_KEY`)
+- [ ] Configurar credencial **HTTP Header Auth** com `x-n8n-secret` para validar chamadas de entrada do Hub
+- [ ] Configurar credencial **HTTP Header Auth** com `Authorization: Bearer {{WHATSAPP_TOKEN}}` para chamadas à Meta Graph API
+- [ ] Configurar variáveis de ambiente no N8n:
+  - `HUB_URL` — URL base do Hub (ex: `https://araujo-hub.vercel.app`)
+  - `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` — acesso ao banco
+  - `WHATSAPP_PHONE_NUMBER_ID` — ID do número WhatsApp Business
+  - `INSTAGRAM_PAGE_ID` — ID da página Instagram
+  - `CRON_SECRET` — secret para o endpoint de follow-up
+- [ ] Exportar todos os workflows como JSON e salvar em `n8n/workflows/` no repositório
+- [ ] Documentar em `docs/N8N-FLOWS.md`:
+  - Mapa visual de cada fluxo (diagrama texto)
+  - Lista de variáveis necessárias e onde configurar
+  - Instruções de importação dos workflows no N8n
+
+**Commit final:**
+
+```text
+feat(M7): fluxos N8n com IA — atendimento, fechamento, handoff e follow-up
+```
 
 ---
 
@@ -294,3 +389,4 @@ M1 (interface base) → M2 (CRM com mock) → M3 (banco + auth real)
 - Tipos do domínio: [lib/types/index.ts](../lib/types/index.ts)
 - Supabase clients: [lib/supabase/](../lib/supabase/)
 - Middleware de auth: [middleware.ts](../middleware.ts)
+- Integração N8n (endpoints e payloads): [docs/N8N.md](./N8N.md)

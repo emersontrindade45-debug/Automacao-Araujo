@@ -26,23 +26,23 @@
 
 ### Entregas
 
-- [ ] Ler `node_modules/next/dist/docs/` e anotar as breaking changes relevantes
-- [ ] Ajustar `app/layout.tsx` com metadados reais do projeto ("Araujo Hub")
-- [ ] Criar `app/globals.css` com variáveis de cor (brand, surface, muted, danger, success)
-- [ ] Criar componentes base em `components/ui/`:
-  - [ ] `Button` (variantes: primary, secondary, ghost, destructive)
-  - [ ] `Badge` (variantes por etapa do pipeline)
-  - [ ] `Card` e `CardHeader`/`CardContent`/`CardFooter`
-  - [ ] `Input`, `Textarea`, `Select`
-  - [ ] `Avatar` (iniciais do usuário)
-  - [ ] `Spinner` / loading state
-- [ ] Criar `components/layout/`:
-  - [ ] `Sidebar` com navegação (Kanban, Clientes, Pedidos, Preços)
-  - [ ] `Header` com nome do usuário, papel e logout
-  - [ ] `Shell` que combina Sidebar + Header + slot de conteúdo
-- [ ] Aplicar `Shell` no `app/(crm)/layout.tsx`
-- [ ] Criar página `/` (landpage pública) com formulário de captura de lead (nome, telefone, canal)
-- [ ] Garantir que `npm run build` passa sem erros
+- [x] Ler `node_modules/next/dist/docs/` e anotar as breaking changes relevantes
+- [x] Ajustar `app/layout.tsx` com metadados reais do projeto ("Araujo Hub")
+- [x] Criar `app/globals.css` com variáveis de cor (brand, surface, muted, danger, success)
+- [x] Criar componentes base em `components/ui/`:
+  - [x] `Button` (variantes: primary, secondary, ghost, destructive)
+  - [x] `Badge` (variantes por etapa do pipeline)
+  - [x] `Card` e `CardHeader`/`CardContent`/`CardFooter`
+  - [x] `Input`, `Textarea`, `Select`
+  - [x] `Avatar` (iniciais do usuário)
+  - [x] `Spinner` / loading state
+- [x] Criar `components/layout/`:
+  - [x] `Sidebar` com navegação (Kanban, Clientes, Pedidos, Preços)
+  - [x] `Header` com nome do usuário, papel e logout
+  - [x] `Shell` que combina Sidebar + Header + slot de conteúdo
+- [x] Aplicar `Shell` no `app/(crm)/layout.tsx`
+- [x] Criar página `/` (landpage pública) com formulário de captura de lead (nome, telefone, canal)
+- [x] Garantir que `npm run build` passa sem erros
 
 **Commit final:**
 ```

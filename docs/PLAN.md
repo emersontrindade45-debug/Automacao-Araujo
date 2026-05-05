@@ -150,38 +150,38 @@ feat(M3): autenticação real e banco de dados integrado
 ### Entregas
 
 #### Webhook WhatsApp
-- [ ] Criar `app/api/webhooks/whatsapp/route.ts`
-- [ ] Verificação de token GET (desafio do Meta)
-- [ ] Handler POST: receber mensagem, upsert cliente, registrar log, mover etapa para `atendimento`
-- [ ] Validar assinatura HMAC com `WHATSAPP_TOKEN`
-- [ ] Escrever tipos para payload do WhatsApp Business API
+- [x] Criar `app/api/webhooks/whatsapp/route.ts`
+- [x] Verificação de token GET (desafio do Meta)
+- [x] Handler POST: receber mensagem, upsert cliente, registrar log, mover etapa para `atendimento`
+- [x] Validar assinatura HMAC com `WHATSAPP_TOKEN`
+- [x] Escrever tipos para payload do WhatsApp Business API
 
 #### Webhook Instagram
-- [ ] Criar `app/api/webhooks/instagram/route.ts`
-- [ ] Mesma lógica: verificação GET + handler POST
-- [ ] Upsert cliente com `canal_origem: "instagram"`
+- [x] Criar `app/api/webhooks/instagram/route.ts`
+- [x] Mesma lógica: verificação GET + handler POST
+- [x] Upsert cliente com `canal_origem: "instagram"`
 
 #### Webhook N8n (handoff)
-- [ ] Criar `app/api/webhooks/n8n/route.ts`
-- [ ] Receber `HandoffPayload` (definido em `lib/types/index.ts`)
-- [ ] Validar secret com `N8N_WEBHOOK_SECRET`
-- [ ] Aplicar regras de handoff:
+- [x] Criar `app/api/webhooks/n8n/route.ts`
+- [x] Receber `HandoffPayload` (definido em `lib/types/index.ts`)
+- [x] Validar secret com `N8N_WEBHOOK_SECRET`
+- [x] Aplicar regras de handoff:
   - Mensagem ambígua → etapa `atendimento`
   - Pedido confirmado → etapa `pedido_gerado`, criar registro em `pedidos`
   - Separação completa → etapa `em_rota`
   - Sem resposta → etapa `follow_up`
-- [ ] Disparar notificação Resend para o atendente responsável ao receber handoff crítico
+- [x] Disparar notificação Resend para o atendente responsável ao receber handoff crítico
 
 #### Integração N8n
-- [ ] Criar `lib/n8n/client.ts` com função para chamar webhooks de saída do N8n
-- [ ] Criar `lib/n8n/payloads.ts` com builders tipados de payload
-- [ ] Documentar em `docs/N8N.md` o fluxo de eventos: entrada → processamento → handoff
+- [x] Criar `lib/n8n/client.ts` com função para chamar webhooks de saída do N8n
+- [x] Criar `lib/n8n/payloads.ts` com builders tipados de payload
+- [x] Documentar em `docs/N8N.md` o fluxo de eventos: entrada → processamento → handoff
 
 #### Testes manuais
 - [ ] Testar webhook WhatsApp com `curl` simulando payload do Meta
 - [ ] Testar webhook N8n com payload de handoff
 - [ ] Validar que card aparece no Kanban em tempo real via Realtime
-- [ ] Garantir que `npm run build` passa sem erros
+- [x] Garantir que `npm run build` passa sem erros
 
 **Commit final:**
 ```

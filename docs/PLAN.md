@@ -60,34 +60,34 @@ feat(M1): setup, design system e layout base autenticado
 ### Entregas
 
 #### Kanban
-- [ ] Criar `app/(crm)/kanban/page.tsx`
-- [ ] Componente `KanbanBoard` com colunas para cada `Etapa`:
+- [x] Criar `app/(crm)/kanban/page.tsx`
+- [x] Componente `KanbanBoard` com colunas para cada `Etapa`:
   - `novo` · `atendimento` · `fechamento` · `pedido_gerado` · `separacao` · `em_rota` · `pos_venda` · `follow_up` · `marketing`
-- [ ] Componente `KanbanCard` com: nome do cliente, canal de origem, tempo na etapa, badge de etapa
-- [ ] Drag-and-drop de cards entre colunas (sem persistência por ora)
-- [ ] Painel lateral que abre ao clicar num card: histórico mockado, botão de handoff, detalhes do cliente
+- [x] Componente `KanbanCard` com: nome do cliente, canal de origem, tempo na etapa, badge de etapa
+- [x] Drag-and-drop de cards entre colunas (sem persistência por ora)
+- [x] Painel lateral que abre ao clicar num card: histórico mockado, botão de handoff, detalhes do cliente
 
 #### Clientes
-- [ ] Criar `app/(crm)/clientes/page.tsx`
-- [ ] Tabela com busca, filtro por canal (`whatsapp` | `instagram` | `landpage`) e filtro por etapa
-- [ ] Linha expansível com último contato e etapa atual
-- [ ] Página de detalhe `app/(crm)/clientes/[id]/page.tsx` com: dados do cliente, histórico de pedidos, etapa atual e botão para mover etapa
+- [x] Criar `app/(crm)/clientes/page.tsx`
+- [x] Tabela com busca, filtro por canal (`whatsapp` | `instagram` | `landpage`) e filtro por etapa
+- [x] Linha expansível com último contato e etapa atual
+- [x] Página de detalhe `app/(crm)/clientes/[id]/page.tsx` com: dados do cliente, histórico de pedidos, etapa atual e botão para mover etapa
 
 #### Pedidos
-- [ ] Criar `app/(crm)/pedidos/page.tsx`
-- [ ] Lista de pedidos com filtro por status
-- [ ] Componente `PedidoCard` com itens, total, endereço de entrega e método de pagamento
-- [ ] Página de detalhe `app/(crm)/pedidos/[id]/page.tsx` com itens editáveis e ação de confirmação
+- [x] Criar `app/(crm)/pedidos/page.tsx`
+- [x] Lista de pedidos com filtro por status
+- [x] Componente `PedidoCard` com itens, total, endereço de entrega e método de pagamento
+- [x] Página de detalhe `app/(crm)/pedidos/[id]/page.tsx` com itens editáveis e ação de confirmação
 
 #### Preços
-- [ ] Criar `app/(crm)/precos/page.tsx`
-- [ ] Tabela de produtos com preço atual e `StatusPreco` (`pendente` | `aprovado` | `rejeitado`)
-- [ ] Ação de aprovar / rejeitar atualização de preço
-- [ ] Indicador visual de preços pendentes no sidebar
+- [x] Criar `app/(crm)/precos/page.tsx`
+- [x] Tabela de produtos com preço atual e `StatusPreco` (`pendente` | `aprovado` | `rejeitado`)
+- [x] Ação de aprovar / rejeitar atualização de preço
+- [x] Indicador visual de preços pendentes no sidebar
 
 #### Dados mock
-- [ ] Criar `lib/mock/clientes.ts`, `lib/mock/pedidos.ts`, `lib/mock/produtos.ts` com dados realistas em português
-- [ ] Garantir que `npm run build` passa sem erros
+- [x] Criar `lib/mock/clientes.ts`, `lib/mock/pedidos.ts`, `lib/mock/produtos.ts` com dados realistas em português
+- [x] Garantir que `npm run build` passa sem erros
 
 **Commit final:**
 ```

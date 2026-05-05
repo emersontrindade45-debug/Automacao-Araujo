@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import type { Cliente, CanalOrigem, Etapa } from "@/lib/types";
 import { EtapaBadge, CanalBadge, etapaLabels, canalLabels } from "@/components/ui/badge";
@@ -103,9 +103,8 @@ export function ClientesTable({ clientes }: ClientesTableProps) {
               </tr>
             )}
             {filtrados.map((c) => (
-              <>
+              <React.Fragment key={c.id}>
                 <tr
-                  key={c.id}
                   className="border-b border-border last:border-0 hover:bg-surface-subtle transition-colors cursor-pointer"
                   onClick={() => setExpandido(expandido === c.id ? null : c.id)}
                 >
@@ -133,7 +132,7 @@ export function ClientesTable({ clientes }: ClientesTableProps) {
                   </td>
                 </tr>
                 {expandido === c.id && (
-                  <tr key={`${c.id}-exp`} className="bg-surface-subtle border-b border-border">
+                  <tr className="bg-surface-subtle border-b border-border">
                     <td colSpan={6} className="px-6 py-3">
                       <div className="flex items-center justify-between gap-4 flex-wrap">
                         <div className="flex gap-6 text-sm">
@@ -161,7 +160,7 @@ export function ClientesTable({ clientes }: ClientesTableProps) {
                     </td>
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             ))}
           </tbody>
         </table>

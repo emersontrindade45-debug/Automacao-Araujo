@@ -1,10 +1,12 @@
 import { login } from "./actions";
 
-export default function LoginPage({
-  searchParams,
-}: {
+interface Props {
   searchParams: Promise<{ error?: string }>;
-}) {
+}
+
+export default async function LoginPage({ searchParams }: Props) {
+  const { error } = await searchParams;
+
   return (
     <div className="w-full max-w-sm">
       <div className="mb-8 text-center">
@@ -41,7 +43,11 @@ export default function LoginPage({
           />
         </div>
 
-        <ErrorMessage searchParams={searchParams} />
+        {error && (
+          <p className="text-sm text-[var(--color-danger)] bg-red-50 rounded-lg px-3 py-2">
+            E-mail ou senha incorretos. Tente novamente.
+          </p>
+        )}
 
         <button
           type="submit"
@@ -51,20 +57,5 @@ export default function LoginPage({
         </button>
       </form>
     </div>
-  );
-}
-
-async function ErrorMessage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const params = await searchParams;
-  if (!params.error) return null;
-
-  return (
-    <p className="text-sm text-[var(--color-danger)] bg-red-50 rounded-lg px-3 py-2">
-      E-mail ou senha incorretos. Tente novamente.
-    </p>
   );
 }

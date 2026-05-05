@@ -13,10 +13,13 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
+          // Propaga cookies no request primeiro
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
+          // Reconstrói o response com o request atualizado
           supabaseResponse = NextResponse.next({ request });
+          // Copia todos os cookies para o response
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );
@@ -25,19 +28,28 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
+  // IMPORTANTE: não encadear chamadas entre getUser() e o redirect,
+  // pois o session token precisa ser validado antes de qualquer lógica.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const pathname = request.nextUrl.pathname;
+
   const isPublicRoute =
-    request.nextUrl.pathname === "/" ||
-    request.nextUrl.pathname === "/login" ||
-    request.nextUrl.pathname.startsWith("/api/");
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname.startsWith("/api/");
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    const redirectResponse = NextResponse.redirect(url);
+    // Preserva os cookies de sessão no redirect
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value);
+    });
+    return redirectResponse;
   }
 
   return supabaseResponse;

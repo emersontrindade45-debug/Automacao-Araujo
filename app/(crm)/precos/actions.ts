@@ -1,10 +1,14 @@
 "use server";
 
-import { updateStatusPreco } from "@/lib/supabase/queries/precos";
+import { updateStatusPreco, aprovarPreco } from "@/lib/supabase/queries/precos";
 import { revalidatePath } from "next/cache";
-import type { StatusPreco } from "@/lib/types";
 
-export async function atualizarStatusPrecoAction(precoId: string, status: StatusPreco) {
-  await updateStatusPreco(precoId, status);
+export async function aprovarPrecoAction(precoId: string) {
+  await aprovarPreco(precoId);
+  revalidatePath("/precos");
+}
+
+export async function rejeitarPrecoAction(precoId: string) {
+  await updateStatusPreco(precoId, "rejeitado");
   revalidatePath("/precos");
 }

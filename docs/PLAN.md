@@ -200,24 +200,24 @@ feat(M4): webhooks WhatsApp, Instagram e handoff N8n integrados
 ### Entregas
 
 #### Atualização de preços via WhatsApp
-- [ ] Criar `app/api/webhooks/whatsapp/price-update/route.ts` ou estender handler existente
-- [ ] Detectar mensagens de atualização de preço (texto estruturado: "preço [produto] [valor]")
-- [ ] Para áudio: criar `lib/openai/whisper.ts` com chamada à API Whisper para transcrição
-- [ ] Criar registro em `precos` com `status: "pendente"`
-- [ ] Enviar notificação Resend para admin com link de aprovação
-- [ ] Página `app/(crm)/precos/page.tsx` já existente — conectar ações de aprovar/rejeitar às Server Actions reais
+- [x] Criar `app/api/webhooks/whatsapp/price-update/route.ts` ou estender handler existente
+- [x] Detectar mensagens de atualização de preço (texto estruturado: "preço [produto] [valor]")
+- [x] Para áudio: criar `lib/openai/whisper.ts` com chamada à API Whisper para transcrição
+- [x] Criar registro em `precos` com `status: "pendente"`
+- [x] Enviar notificação Resend para admin com link de aprovação
+- [x] Página `app/(crm)/precos/page.tsx` já existente — conectar ações de aprovar/rejeitar às Server Actions reais
 
 #### Follow-up
-- [ ] Criar `app/api/followup/route.ts` — endpoint chamado por cron (N8n ou Vercel Cron)
-- [ ] Listar clientes em `etapa: "follow_up"` com mais de X dias sem atualização
-- [ ] Disparar mensagem de reativação via N8n
-- [ ] Registrar tentativa de follow-up em `logs`
-- [ ] Mover para `marketing` se sem resposta após N tentativas configuráveis
+- [x] Criar `app/api/followup/route.ts` — endpoint chamado por cron (N8n ou Vercel Cron)
+- [x] Listar clientes em `etapa: "follow_up"` com mais de X dias sem atualização
+- [x] Disparar mensagem de reativação via N8n
+- [x] Registrar tentativa de follow-up em `logs`
+- [x] Mover para `marketing` se sem resposta após N tentativas configuráveis
 
 #### Configurações de admin
-- [ ] Criar `app/(crm)/configuracoes/page.tsx` (só acessível a `papel: "admin"`)
-- [ ] Formulário para: dias de inatividade para follow-up, número de tentativas, mensagem padrão de follow-up
-- [ ] Garantir que `npm run build` passa sem erros
+- [x] Criar `app/(crm)/configuracoes/page.tsx` (só acessível a `papel: "admin"`)
+- [x] Formulário para: dias de inatividade para follow-up, número de tentativas, mensagem padrão de follow-up
+- [x] Garantir que `npm run build` passa sem erros
 
 **Commit final:**
 ```

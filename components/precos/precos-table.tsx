@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import type { StatusPreco } from "@/lib/types";
 import type { AtualizacaoPreco } from "@/lib/supabase/queries/precos";
-import { atualizarStatusPrecoAction } from "@/app/(crm)/precos/actions";
+import { aprovarPrecoAction, rejeitarPrecoAction } from "@/app/(crm)/precos/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -44,7 +44,9 @@ export function PrecosTable({ atualizacoes: inicial }: PrecosTableProps) {
 
   function mudarStatus(id: string, status: StatusPreco) {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, status } : i)));
-    startTransition(() => atualizarStatusPrecoAction(id, status));
+    startTransition(() =>
+      status === "aprovado" ? aprovarPrecoAction(id) : rejeitarPrecoAction(id)
+    );
   }
 
   return (

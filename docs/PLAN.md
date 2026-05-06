@@ -357,6 +357,13 @@ Acionado quando Hub chama `N8N_WEBHOOK_PRICE_UPDATE_URL` (após aprovar preço):
 - [ ] **Nó Webhook (Trigger):** recebe payload `{ tipo: "atualizacao_preco", produto_nome, preco_novo, solicitado_por }`
 - [ ] **Nó HTTP Request (Meta Graph API):** envia mensagem ao número de `solicitado_por` (telefone): `"✅ Preço de [produto] atualizado para R$ [valor] e já está ativo no sistema."`
 
+#### Setup de Ferramentas MCP (pré-requisito)
+
+- [x] Instalar 7 skills n8n em `~/.claude/skills/` (n8n-expression-syntax, n8n-mcp-tools-expert, n8n-workflow-patterns, n8n-validation-expert, n8n-node-configuration, n8n-code-javascript, n8n-code-python)
+- [x] Confirmar n8n-mcp instalado globalmente e conectado a `n8n.evoapi.shop`
+- [x] Adicionar Supabase MCP ao `.mcp.json` e autenticar via OAuth 2.1
+- [x] Proteger `.mcp.json` no `.gitignore` (contém API keys)
+
 #### Configuração e Credenciais
 
 - [ ] Configurar credencial **OpenAI** no N8n (`API Key` → `OPENAI_API_KEY`)

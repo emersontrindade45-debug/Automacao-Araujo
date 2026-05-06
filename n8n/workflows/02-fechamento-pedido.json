@@ -1,0 +1,258 @@
+{
+  "name": "02 - Fechamento de Pedido",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fechamento-pedido",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-pedido",
+      "name": "Webhook Pedido",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "fechamento-pedido"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/produtos",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "ativo", "value": "=eq.true" },
+            { "name": "select", "value": "id,nome,preco,unidade" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-buscar-produtos",
+      "name": "Buscar Produtos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Você é responsável por coletar os dados de um pedido de forma conversacional e estruturada.\n\nCATÁLOGO DISPONÍVEL:\n{{ $('Buscar Produtos').all().map(item => `- ID: ${item.json.id} | ${item.json.nome}: R$ ${item.json.preco.toFixed(2)}/${item.json.unidade}`).join('\\n') }}\n\nHISTÓRICO DA CONVERSA:\n{{ $('Webhook Pedido').item.json.historico || '(nenhum)' }}\n\nDADOS JÁ COLETADOS:\n{{ JSON.stringify($('Webhook Pedido').item.json.dados_parciais || {}) }}\n\nSua tarefa:\n1. Analise a mensagem e o histórico\n2. Extraia ou solicite os dados faltantes nesta ordem de prioridade:\n   a) itens_pedido (array com produto_id, nome, quantidade, preco_unitario)\n   b) endereco_entrega (string completo)\n   c) forma_pagamento (dinheiro/pix/cartao_credito/cartao_debito)\n   d) observacoes (opcional)\n3. Se TODOS os dados obrigatórios estiverem coletados, defina pedido_completo: true\n4. Se faltarem dados, defina pedido_completo: false e faça UMA pergunta para coletar o próximo dado\n\nRetorne APENAS JSON válido neste formato:\n{\n  \"resposta\": \"mensagem para o cliente\",\n  \"pedido_completo\": false,\n  \"dados_coletados\": {\n    \"itens_pedido\": [],\n    \"endereco_entrega\": null,\n    \"forma_pagamento\": null,\n    \"observacoes\": null\n  }\n}",
+              "type": "system"
+            },
+            {
+              "message": "={{ $('Webhook Pedido').item.json.mensagem }}",
+              "type": "user"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 1200
+        }
+      },
+      "id": "node-ia-coletar",
+      "name": "IA Coleta de Pedido (GPT-4o)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [680, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credential",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-parsed",
+              "name": "parsed",
+              "value": "={{ JSON.parse($json.message.content) }}",
+              "type": "object"
+            },
+            {
+              "id": "assign-completo",
+              "name": "pedido_completo",
+              "value": "={{ JSON.parse($json.message.content).pedido_completo }}",
+              "type": "boolean"
+            },
+            {
+              "id": "assign-resposta",
+              "name": "resposta",
+              "value": "={{ JSON.parse($json.message.content).resposta }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-dados",
+              "name": "dados_coletados",
+              "value": "={{ JSON.parse($json.message.content).dados_coletados }}",
+              "type": "object"
+            },
+            {
+              "id": "assign-tel",
+              "name": "telefone",
+              "value": "={{ $('Webhook Pedido').item.json.telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-nome",
+              "name": "nome_cliente",
+              "value": "={{ $('Webhook Pedido').item.json.nome_cliente || 'Cliente' }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-canal",
+              "name": "canal",
+              "value": "={{ $('Webhook Pedido').item.json.canal || 'whatsapp' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-parse-pedido",
+      "name": "Parse Pedido IA",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-completo",
+              "leftValue": "={{ $json.pedido_completo }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-if-completo",
+      "name": "Pedido Completo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HUB_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-n8n-secret", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "=",
+              "value": "={\n  \"tipo\": \"pedido_confirmado\",\n  \"atendente_email\": \"atendente@loja.com\",\n  \"handoff\": {\n    \"nome\": \"{{ $json.nome_cliente }}\",\n    \"telefone\": \"{{ $json.telefone }}\",\n    \"canal_origem\": \"{{ $json.canal }}\",\n    \"etapa\": \"pedido_gerado\",\n    \"ultimas_mensagens\": [],\n    \"itens_pedido\": {{ JSON.stringify($json.dados_coletados.itens_pedido) }},\n    \"endereco_entrega\": \"{{ $json.dados_coletados.endereco_entrega }}\",\n    \"forma_pagamento\": \"{{ $json.dados_coletados.forma_pagamento }}\",\n    \"observacoes\": \"{{ $json.dados_coletados.observacoes || '' }}\",\n    \"proxima_acao\": \"Separar pedido\"\n  }\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-confirmar-pedido",
+      "name": "Confirmar Pedido → Hub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.WHATSAPP_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "=",
+              "value": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Parse Pedido IA').item.json.telefone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"{{ $('Parse Pedido IA').item.json.resposta }}\" }\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-enviar-msg",
+      "name": "Enviar Mensagem WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, pedido_completo: $('Parse Pedido IA').item.json.pedido_completo }) }}",
+        "options": {}
+      },
+      "id": "node-response-pedido",
+      "name": "Resposta Pedido",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1560, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Pedido": {
+      "main": [[{ "node": "Buscar Produtos", "type": "main", "index": 0 }]]
+    },
+    "Buscar Produtos": {
+      "main": [[{ "node": "IA Coleta de Pedido (GPT-4o)", "type": "main", "index": 0 }]]
+    },
+    "IA Coleta de Pedido (GPT-4o)": {
+      "main": [[{ "node": "Parse Pedido IA", "type": "main", "index": 0 }]]
+    },
+    "Parse Pedido IA": {
+      "main": [[{ "node": "Pedido Completo?", "type": "main", "index": 0 }]]
+    },
+    "Pedido Completo?": {
+      "main": [
+        [{ "node": "Confirmar Pedido → Hub", "type": "main", "index": 0 }],
+        [{ "node": "Enviar Mensagem WhatsApp", "type": "main", "index": 0 }]
+      ]
+    },
+    "Confirmar Pedido → Hub": {
+      "main": [[{ "node": "Resposta Pedido", "type": "main", "index": 0 }]]
+    },
+    "Enviar Mensagem WhatsApp": {
+      "main": [[{ "node": "Resposta Pedido", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [{ "name": "pedido" }, { "name": "fechamento" }, { "name": "ia" }],
+  "triggerCount": 1,
+  "updatedAt": "2026-05-06T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -46,3 +46,6 @@ src/
 supabase/.temp/
 
 .vercel
+
+# MCP config (contém API keys)
+.mcp.json

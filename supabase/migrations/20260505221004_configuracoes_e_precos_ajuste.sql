@@ -1,10 +1,10 @@
+-- Remove a constraint FK para auth.users que não se aplica mais
+alter table precos drop constraint if exists precos_solicitado_por_fkey;
+
 -- Ajusta solicitado_por em precos para aceitar texto livre (nome/telefone do WhatsApp)
 -- em vez de UUID (nem sempre teremos um usuário autenticado ao receber via webhook)
 alter table precos
   alter column solicitado_por type text using solicitado_por::text;
-
--- Remove a constraint FK para auth.users que não se aplica mais
-alter table precos drop constraint if exists precos_solicitado_por_fkey;
 
 -- Tabela de configurações do sistema (chave-valor flexível)
 create table configuracoes (

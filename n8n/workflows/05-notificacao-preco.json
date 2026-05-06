@@ -1,0 +1,168 @@
+{
+  "name": "05 - Notificação de Preço Aprovado",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "notificacao-preco",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-preco",
+      "name": "Webhook Preço",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "notificacao-preco"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-produto",
+              "name": "produto_nome",
+              "value": "={{ $json.produto_nome }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-preco",
+              "name": "preco_novo",
+              "value": "={{ $json.preco_novo }}",
+              "type": "number"
+            },
+            {
+              "id": "assign-solicitado",
+              "name": "solicitado_por",
+              "value": "={{ $json.solicitado_por }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-mensagem",
+              "name": "mensagem_confirmacao",
+              "value": "=✅ Preço de {{ $json.produto_nome }} atualizado para R$ {{ Number($json.preco_novo).toFixed(2).replace('.', ',') }} e já está ativo no sistema.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-montar-mensagem",
+      "name": "Montar Mensagem",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-tem-telefone",
+              "leftValue": "={{ $json.solicitado_por }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "isNotEmpty" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-tem-telefone",
+      "name": "Tem Telefone?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.WHATSAPP_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "=",
+              "value": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.solicitado_por }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"{{ $json.mensagem_confirmacao }}\" }\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-enviar-confirmacao",
+      "name": "Enviar Confirmação WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 180]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-skip",
+              "name": "motivo",
+              "value": "Sem telefone do solicitante — notificação ignorada",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-skip-notif",
+      "name": "Sem Telefone (Skip)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true }",
+        "options": {}
+      },
+      "id": "node-response-preco",
+      "name": "Resposta OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Preço": {
+      "main": [[{ "node": "Montar Mensagem", "type": "main", "index": 0 }]]
+    },
+    "Montar Mensagem": {
+      "main": [[{ "node": "Tem Telefone?", "type": "main", "index": 0 }]]
+    },
+    "Tem Telefone?": {
+      "main": [
+        [{ "node": "Enviar Confirmação WhatsApp", "type": "main", "index": 0 }],
+        [{ "node": "Sem Telefone (Skip)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Enviar Confirmação WhatsApp": {
+      "main": [[{ "node": "Resposta OK", "type": "main", "index": 0 }]]
+    },
+    "Sem Telefone (Skip)": {
+      "main": [[{ "node": "Resposta OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [{ "name": "preco" }, { "name": "notificacao" }, { "name": "whatsapp" }],
+  "triggerCount": 1,
+  "updatedAt": "2026-05-06T00:00:00.000Z",
+  "versionId": "1"
+}

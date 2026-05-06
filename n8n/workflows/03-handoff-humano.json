@@ -1,0 +1,166 @@
+{
+  "name": "03 - Handoff para Humano",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "handoff-humano",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-handoff",
+      "name": "Webhook Handoff",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "handoff-humano"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-tipo",
+              "leftValue": "={{ $json.tipo }}",
+              "rightValue": "sem_resposta",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-if-tipo",
+      "name": "Tipo sem_resposta?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HUB_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-n8n-secret", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "=",
+              "value": "={\n  \"tipo\": \"sem_resposta\",\n  \"atendente_email\": \"{{ $('Webhook Handoff').item.json.atendente_email || 'atendente@loja.com' }}\",\n  \"handoff\": {\n    \"nome\": \"{{ $('Webhook Handoff').item.json.nome }}\",\n    \"telefone\": \"{{ $('Webhook Handoff').item.json.telefone }}\",\n    \"canal_origem\": \"{{ $('Webhook Handoff').item.json.canal || 'whatsapp' }}\",\n    \"etapa\": \"follow_up\",\n    \"ultimas_mensagens\": {{ JSON.stringify($('Webhook Handoff').item.json.ultimas_mensagens || []) }},\n    \"proxima_acao\": \"Follow-up automático por ausência de resposta\"\n  }\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-hub-sem-resposta",
+      "name": "Hub → sem_resposta (follow_up)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HUB_URL }}/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-n8n-secret", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "=",
+              "value": "={\n  \"tipo\": \"ambiguo\",\n  \"atendente_email\": \"{{ $('Webhook Handoff').item.json.atendente_email || 'atendente@loja.com' }}\",\n  \"handoff\": {\n    \"nome\": \"{{ $('Webhook Handoff').item.json.nome }}\",\n    \"telefone\": \"{{ $('Webhook Handoff').item.json.telefone }}\",\n    \"canal_origem\": \"{{ $('Webhook Handoff').item.json.canal || 'whatsapp' }}\",\n    \"etapa\": \"atendimento\",\n    \"ultimas_mensagens\": {{ JSON.stringify($('Webhook Handoff').item.json.ultimas_mensagens || []) }},\n    \"proxima_acao\": \"Atendimento humano necessário\"\n  }\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-hub-ambiguo",
+      "name": "Hub → ambiguo (atendimento)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.WHATSAPP_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "=",
+              "value": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Webhook Handoff').item.json.telefone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"Aguarde, um atendente irá continuar o seu atendimento em breve. 😊\" }\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-aviso-cliente",
+      "name": "Avisar Cliente (WhatsApp)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true }",
+        "options": {}
+      },
+      "id": "node-response-handoff",
+      "name": "Resposta Handoff",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Handoff": {
+      "main": [[{ "node": "Tipo sem_resposta?", "type": "main", "index": 0 }]]
+    },
+    "Tipo sem_resposta?": {
+      "main": [
+        [{ "node": "Hub → sem_resposta (follow_up)", "type": "main", "index": 0 }],
+        [{ "node": "Hub → ambiguo (atendimento)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Hub → sem_resposta (follow_up)": {
+      "main": [[{ "node": "Avisar Cliente (WhatsApp)", "type": "main", "index": 0 }]]
+    },
+    "Hub → ambiguo (atendimento)": {
+      "main": [[{ "node": "Avisar Cliente (WhatsApp)", "type": "main", "index": 0 }]]
+    },
+    "Avisar Cliente (WhatsApp)": {
+      "main": [[{ "node": "Resposta Handoff", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [{ "name": "handoff" }, { "name": "humano" }],
+  "triggerCount": 1,
+  "updatedAt": "2026-05-06T00:00:00.000Z",
+  "versionId": "1"
+}

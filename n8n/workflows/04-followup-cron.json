@@ -1,7 +1,14 @@
 {
-  "name": "04 - Follow-up Cron",
+  "id": "zoEv7n7Vrn3H7rAj",
+  "name": "04 — Follow-up Cron",
+  "active": true,
   "nodes": [
     {
+      "id": "node-schedule",
+      "name": "Schedule 09h Seg-Sab",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [240, 300],
       "parameters": {
         "rule": {
           "interval": [
@@ -11,102 +18,103 @@
             }
           ]
         }
-      },
-      "id": "node-schedule-trigger",
-      "name": "Schedule Trigger (09h Seg-Sáb)",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [240, 300]
+      }
     },
     {
+      "id": "node-http",
+      "name": "POST followup Hub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [460, 300],
+      "continueOnFail": true,
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.HUB_URL }}/api/followup",
+        "url": "={{ $vars.HUB_URL }}/api/followup",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "x-cron-secret", "value": "={{ $env.CRON_SECRET }}" },
-            { "name": "Content-Type", "value": "application/json" }
+            { "name": "x-cron-secret", "value": "={{ $vars.CRON_SECRET }}" }
           ]
         },
-        "options": {
-          "timeout": 30000
-        }
-      },
-      "id": "node-chamar-followup",
-      "name": "Chamar /api/followup",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [460, 300]
+        "options": {}
+      }
     },
     {
-      "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [
-            {
-              "id": "cond-ok",
-              "leftValue": "={{ $json.ok }}",
-              "rightValue": true,
-              "operator": { "type": "boolean", "operation": "equals" }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "node-if-ok",
+      "id": "node-if",
       "name": "Sucesso?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [680, 300]
-    },
-    {
+      "typeVersion": 2.3,
+      "position": [680, 300],
       "parameters": {
-        "assignments": {
-          "assignments": [
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
             {
-              "id": "assign-log-ok",
-              "name": "resultado",
-              "value": "=Follow-up executado com sucesso em {{ $now.format('yyyy-MM-dd HH:mm') }}. Clientes processados: {{ $json.processados || 0 }}",
-              "type": "string"
+              "id": "cron-check-1",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "number",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $response.statusCode }}",
+              "rightValue": 200
             }
           ]
         },
         "options": {}
-      },
-      "id": "node-log-sucesso",
+      }
+    },
+    {
+      "id": "node-log-ok",
       "name": "Log Sucesso",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [900, 180]
-    },
-    {
+      "position": [900, 200],
       "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
         "assignments": {
           "assignments": [
-            {
-              "id": "assign-log-erro",
-              "name": "erro",
-              "value": "=Follow-up FALHOU em {{ $now.format('yyyy-MM-dd HH:mm') }}. Status: {{ $json.statusCode || 'desconhecido' }}",
-              "type": "string"
-            }
+            { "id": "ls1", "name": "status", "value": "ok", "type": "string" },
+            { "id": "ls2", "name": "executadoEm", "value": "={{ new Date().toISOString() }}", "type": "string" }
           ]
         },
         "options": {}
-      },
-      "id": "node-log-erro",
+      }
+    },
+    {
+      "id": "node-log-err",
       "name": "Log Erro",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [900, 420]
+      "position": [900, 400],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            { "id": "le1", "name": "status", "value": "erro", "type": "string" },
+            { "id": "le2", "name": "statusCode", "value": "={{ $response.statusCode }}", "type": "string" },
+            { "id": "le3", "name": "executadoEm", "value": "={{ new Date().toISOString() }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      }
     }
   ],
   "connections": {
-    "Schedule Trigger (09h Seg-Sáb)": {
-      "main": [[{ "node": "Chamar /api/followup", "type": "main", "index": 0 }]]
+    "Schedule 09h Seg-Sab": {
+      "main": [[{ "node": "POST followup Hub", "type": "main", "index": 0 }]]
     },
-    "Chamar /api/followup": {
+    "POST followup Hub": {
       "main": [[{ "node": "Sucesso?", "type": "main", "index": 0 }]]
     },
     "Sucesso?": {
@@ -116,16 +124,11 @@
       ]
     }
   },
-  "pinData": {},
   "settings": {
     "executionOrder": "v1",
-    "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromSameOwner",
-    "errorWorkflow": ""
+    "timezone": "America/Sao_Paulo"
   },
-  "staticData": null,
-  "tags": [{ "name": "followup" }, { "name": "cron" }],
-  "triggerCount": 1,
-  "updatedAt": "2026-05-06T00:00:00.000Z",
-  "versionId": "1"
+  "versionId": "36c102bc-c379-4778-9072-f342ddbcaaee",
+  "updatedAt": "2026-05-06T23:26:47.853Z",
+  "createdAt": "2026-05-06T23:26:35.345Z"
 }

@@ -71,18 +71,27 @@ WhatsApp / Instagram
 
 **Trigger:** `POST /webhook/atendimento-entrada`
 
-O Hub chama este endpoint após receber e registrar uma mensagem de WhatsApp/Instagram.
+O Hub chama este endpoint após receber e registrar uma mensagem de WhatsApp/Instagram. Também usado pelo follow-up cron — nesse caso, o payload inclui `tipo: "follow_up"` e a mensagem é enviada diretamente, sem passar pela IA.
 
 ### Nós
 
 ```
 Webhook Trigger
     │
-    ├──► Buscar Cliente (Supabase REST)
-    │         GET /rest/v1/clientes?telefone=eq.{telefone}
+    ▼
+Normalizar Payload
     │
-    └──► Buscar Catálogo (Supabase REST)
-              GET /rest/v1/produtos?ativo=eq.true
+    ▼
+Follow-up ou Atendimento? (Switch)
+    │
+    ├─ tipo=follow_up ──► Enviar Follow-up WhatsApp (Evolution API)
+    │                          │
+    │                          └──► Respond OK
+    │
+    └─ outros ──► Buscar Cliente (Supabase REST)
+                       GET /rest/v1/clientes?telefone=eq.{telefone}
+                  ──► Buscar Catálogo (Hub REST)
+                       GET /api/produtos
                    │
                    ▼
             Montar Contexto (Set)
@@ -395,7 +404,7 @@ Configure no `.env.local` do Hub:
 N8N_WEBHOOK_ATENDIMENTO_URL=https://n8n.evoapi.shop/webhook/atendimento-entrada
 N8N_WEBHOOK_HANDOFF_URL=https://n8n.evoapi.shop/webhook/handoff-humano
 N8N_WEBHOOK_PRICE_UPDATE_URL=https://n8n.evoapi.shop/webhook/notificacao-preco
-N8N_WEBHOOK_FOLLOW_UP_URL=https://n8n.evoapi.shop/webhook/atendimento-entrada
+N8N_WEBHOOK_FOLLOW_UP_URL=https://n8n.evoapi.shop/webhook/envio-direto-whatsapp
 ```
 
 ---

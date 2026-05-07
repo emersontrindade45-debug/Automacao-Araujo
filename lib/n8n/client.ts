@@ -1,7 +1,7 @@
 type N8nWebhookName = "atendimento" | "handoff" | "price-update" | "follow-up";
 
 const WEBHOOK_URLS: Record<N8nWebhookName, string | undefined> = {
-  atendimento: process.env.N8N_WEBHOOK_HANDOFF_URL,
+  atendimento: process.env.N8N_WEBHOOK_ATENDIMENTO_URL,
   handoff: process.env.N8N_WEBHOOK_HANDOFF_URL,
   "price-update": process.env.N8N_WEBHOOK_PRICE_UPDATE_URL,
   "follow-up": process.env.N8N_WEBHOOK_FOLLOW_UP_URL,

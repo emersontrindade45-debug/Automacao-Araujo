@@ -378,20 +378,24 @@ Configure em **Credentials** no painel do N8n:
 
 ---
 
-## URLs dos Webhooks N8n (após ativar)
+## URLs dos Webhooks N8n (produção — M7)
 
-Após ativar cada workflow, o N8n gera URLs únicas. Copie-as e configure no Hub:
+Workflows ativos na instância `https://n8n.evoapi.shop`:
 
+| Workflow | ID | Webhook URL |
+| -------- | -- | ----------- |
+| Fluxo 1 — Atendimento Principal | `igjfXgJa6zYvQz1u` | `https://n8n.evoapi.shop/webhook/atendimento-entrada` |
+| Fluxo 2 — Fechamento de Pedido | `fmYqq9lCHX6hgQzv` | `https://n8n.evoapi.shop/webhook/fechamento-pedido` |
+| Fluxo 3 — Handoff para Humano | `ayAye8I7ms0CaNGq` | `https://n8n.evoapi.shop/webhook/handoff-humano` |
+| Fluxo 4 — Follow-up Cron | `zoEv7n7Vrn3H7rAj` | Schedule (09h Seg-Sáb) |
+| Fluxo 5 — Notificação de Preço | `Zlx5Uh93mdKRBbnv` | `https://n8n.evoapi.shop/webhook/notificacao-preco` |
+
+Configure no `.env.local` do Hub:
 ```env
-# .env.local do Hub
-N8N_WEBHOOK_HANDOFF_URL=https://seu-n8n.com/webhook/handoff-humano
-N8N_WEBHOOK_PRICE_UPDATE_URL=https://seu-n8n.com/webhook/notificacao-preco
-N8N_WEBHOOK_FOLLOW_UP_URL=https://seu-n8n.com/webhook/atendimento-entrada
-```
-
-E no Hub, configure também a URL de entrada do Fluxo 1 para ser chamada ao receber mensagens:
-```env
-N8N_WEBHOOK_ATENDIMENTO_URL=https://seu-n8n.com/webhook/atendimento-entrada
+N8N_WEBHOOK_ATENDIMENTO_URL=https://n8n.evoapi.shop/webhook/atendimento-entrada
+N8N_WEBHOOK_HANDOFF_URL=https://n8n.evoapi.shop/webhook/handoff-humano
+N8N_WEBHOOK_PRICE_UPDATE_URL=https://n8n.evoapi.shop/webhook/notificacao-preco
+N8N_WEBHOOK_FOLLOW_UP_URL=https://n8n.evoapi.shop/webhook/atendimento-entrada
 ```
 
 ---

@@ -1,0 +1,89 @@
+{
+  "id": "Zlx5Uh93mdKRBbnv",
+  "name": "Fluxo 5 — Notificação de Preço",
+  "active": true,
+  "nodes": [
+    {
+      "id": "node-webhook-preco",
+      "name": "Webhook Preco",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [240, 300],
+      "parameters": {
+        "path": "notificacao-preco",
+        "httpMethod": "POST",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "webhookId": "2359d431-1243-4647-9d56-62e451fd634e"
+    },
+    {
+      "id": "node-montar-mensagem",
+      "name": "Montar Mensagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst produto = body.produto_nome;\nconst preco = Number(body.preco_novo).toFixed(2).replace('.', ',');\nconst telefone = body.solicitado_por;\nconst texto = `✅ Preço de ${produto} atualizado para R$ ${preco} e já está ativo no sistema.`;\nreturn [{ json: { telefone, texto } }];"
+      }
+    },
+    {
+      "id": "node-enviar-whatsapp",
+      "name": "Enviar WhatsApp Evolution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [680, 300],
+      "continueOnFail": false,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.EVOLUTION_API_URL }}/message/sendText/{{ $vars.EVOLUTION_INSTANCE }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $json.telefone }}\",\n  \"text\": \"{{ $json.texto }}\"\n}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "a8nTmqXTRpC8LVxc",
+          "name": "Evolution API"
+        }
+      }
+    },
+    {
+      "id": "node-respond-ok",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [900, 300],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true }",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Preco": {
+      "main": [[{"node": "Montar Mensagem", "type": "main", "index": 0}]]
+    },
+    "Montar Mensagem": {
+      "main": [[{"node": "Enviar WhatsApp Evolution", "type": "main", "index": 0}]]
+    },
+    "Enviar WhatsApp Evolution": {
+      "main": [[{"node": "Respond OK", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  },
+  "versionId": "b64dcc03-0bf8-404e-a319-0fa10c5d92af",
+  "createdAt": "2026-05-06T23:30:09.154Z",
+  "updatedAt": "2026-05-06T23:30:18.619Z"
+}

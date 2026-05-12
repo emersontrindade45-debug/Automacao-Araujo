@@ -1,0 +1,134 @@
+{
+  "id": "zoEv7n7Vrn3H7rAj",
+  "name": "Fluxo 4 — Follow-up Cron",
+  "active": true,
+  "nodes": [
+    {
+      "id": "node-schedule",
+      "name": "Schedule 09h Seg-Sab",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [240, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-6"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-http",
+      "name": "POST followup Hub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [460, 300],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.HUB_URL }}/api/followup",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-cron-secret", "value": "={{ $vars.CRON_SECRET }}" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-if",
+      "name": "Sucesso?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [680, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cron-check-1",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "number",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $response.statusCode }}",
+              "rightValue": 200
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-log-ok",
+      "name": "Log Sucesso",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 200],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            { "id": "ls1", "name": "status", "value": "ok", "type": "string" },
+            { "id": "ls2", "name": "executadoEm", "value": "={{ new Date().toISOString() }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-log-err",
+      "name": "Log Erro",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 400],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            { "id": "le1", "name": "status", "value": "erro", "type": "string" },
+            { "id": "le2", "name": "statusCode", "value": "={{ $response.statusCode }}", "type": "string" },
+            { "id": "le3", "name": "executadoEm", "value": "={{ new Date().toISOString() }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Schedule 09h Seg-Sab": {
+      "main": [[{ "node": "POST followup Hub", "type": "main", "index": 0 }]]
+    },
+    "POST followup Hub": {
+      "main": [[{ "node": "Sucesso?", "type": "main", "index": 0 }]]
+    },
+    "Sucesso?": {
+      "main": [
+        [{ "node": "Log Sucesso", "type": "main", "index": 0 }],
+        [{ "node": "Log Erro", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "versionId": "36c102bc-c379-4778-9072-f342ddbcaaee",
+  "updatedAt": "2026-05-06T23:26:47.853Z",
+  "createdAt": "2026-05-06T23:26:35.345Z"
+}

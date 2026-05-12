@@ -1,0 +1,245 @@
+{
+  "name": "Fluxo 1 — Atendimento Principal",
+  "nodes": [
+    {
+      "id": "n1-webhook",
+      "name": "Webhook Entrada",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "araujo-entrada",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "n1-normalizar",
+      "name": "Normalizar Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body ?? {};\nlet telefone, mensagem, canal, nome_cliente, tipo, is_from_me, is_group;\nif (body.data && body.data.Info) {\n  const info = body.data.Info;\n  const msg = body.data.Message;\n  telefone = (info.Chat ?? '').replace('@s.whatsapp.net','').replace('@g.us','');\n  nome_cliente = info.PushName ?? 'Cliente';\n  is_from_me = info.IsFromMe === true;\n  is_group = info.IsGroup === true;\n  canal = 'whatsapp';\n  tipo = body.tipo ?? 'atendimento';\n  mensagem = msg.conversation ?? msg.extendedTextMessage?.text ?? msg.imageMessage?.caption ?? msg.videoMessage?.caption ?? '';\n} else {\n  telefone = body.telefone ?? '';\n  mensagem = body.mensagem ?? '';\n  canal = body.canal ?? 'whatsapp';\n  nome_cliente = body.nome_cliente ?? 'Cliente';\n  tipo = body.tipo ?? 'atendimento';\n  is_from_me = false;\n  is_group = false;\n}\nreturn [{ json: { telefone, mensagem, canal, nome_cliente, tipo, is_from_me, is_group } }];"
+      }
+    },
+    {
+      "id": "n1-if-tipo",
+      "name": "Follow-up ou Atendimento",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [680, 300],
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+          "conditions": [{"leftValue": "={{ $json.tipo }}", "rightValue": "follow_up", "operator": {"type": "string", "operation": "equals"}}],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n1-send-followup",
+      "name": "Enviar Follow-up WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 160],
+      "parameters": {
+        "method": "POST",
+        "url": "https://evo.evoapi.shop/message/sendText/Araujo",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "apikey", "value": "EVOLUTION_API_KEY"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({number: $json.telefone, text: $json.mensagem}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n1-respond-followup",
+      "name": "Respond Follow-up OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 160],
+      "parameters": {"respondWith": "json", "responseBody": "{\"ok\": true, \"tipo\": \"follow_up\"}"}
+    },
+    {
+      "id": "n1-buscar-cliente",
+      "name": "Buscar Cliente Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "alwaysOutputData": true,
+      "position": [900, 360],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://zziapgnenvugyvrgrhrs.supabase.co/rest/v1/clientes?telefone=eq.{{ $json.telefone }}&select=id,nome,etapa_atual,canal_origem",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [
+          {"name": "apikey", "value": "SUPABASE_SERVICE_ROLE_KEY"},
+          {"name": "Authorization", "value": "Bearer SUPABASE_SERVICE_ROLE_KEY"}
+        ]},
+        "options": {"response": {"response": {"neverError": true}}}
+      }
+    },
+    {
+      "id": "n1-buscar-catalogo",
+      "name": "Buscar Catalogo Hub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "alwaysOutputData": true,
+      "position": [900, 500],
+      "parameters": {
+        "method": "GET",
+        "url": "https://araujo-hub.vercel.app/api/produtos",
+        "options": {"response": {"response": {"neverError": true}}}
+      }
+    },
+    {
+      "id": "n1-montar-prompt",
+      "name": "Montar Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 360],
+      "parameters": {
+        "jsCode": "const payload = $('Normalizar Payload').item.json;\n\nlet clientes = [];\ntry {\n  const cd = $('Buscar Cliente Supabase').item.json;\n  clientes = Array.isArray(cd) ? cd : (cd ? [cd] : []);\n} catch(e) {}\n\nlet catalogo = [];\ntry {\n  const cat = $('Buscar Catalogo Hub').item.json;\n  catalogo = Array.isArray(cat) ? cat : (cat ? [cat] : []);\n} catch(e) {}\n\nconst cliente = clientes[0] ?? null;\nconst etapa = cliente?.etapa_atual ?? 'novo';\nconst cliente_id = cliente?.id ?? '';\n\nconst texto_para_ia = '[CONTEXTO DA LOJA]\\nVoce e um atendente do Mercado Araujo, mercearia e acougue familiar.\\nResponda em portugues brasileiro, de forma cordial e natural.\\n\\nCatalogo: ' + JSON.stringify(catalogo) + '\\nCliente: ' + payload.nome_cliente + '\\nEtapa: ' + etapa + '\\n\\n[INSTRUCAO]\\nRetorne SOMENTE um json valido neste formato:\\n{\"resposta\": \"mensagem para cliente\", \"intencao\": \"saudacao|consulta_preco|fazer_pedido|fora_escopo|humano\"}\\n\\n[MENSAGEM DO CLIENTE]\\n' + payload.mensagem;\n\nreturn [{ json: {\n  telefone: payload.telefone,\n  mensagem: payload.mensagem,\n  canal: payload.canal,\n  nome_cliente: payload.nome_cliente,\n  etapa_cliente: etapa,\n  cliente_id: cliente_id,\n  texto_para_ia: texto_para_ia\n}}];"
+      }
+    },
+    {
+      "id": "n1-agente",
+      "name": "Agente IA Atendimento",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [1340, 360],
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": {"__rl": true, "value": "gpt-4o", "mode": "list", "cachedResultName": "GPT-4O"},
+        "options": {
+          "responseFormat": "json_object",
+          "temperature": 0.3
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "user",
+              "content": "={{ $json.texto_para_ia }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "YeAJgTkwwmKkcFtk",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "id": "n1-parse",
+      "name": "Parse Resposta IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 360],
+      "parameters": {
+        "jsCode": "const msg = $input.item.json.message?.content ?? $input.item.json.content ?? $input.item.json.text ?? '{}';\nlet parsed;\ntry { parsed = JSON.parse(msg); }\ncatch(e) {\n  const m = msg.match(/{[\\s\\S]*}/);\n  try { parsed = JSON.parse(m?.[0] ?? '{}'); } catch(e2) { parsed = {}; }\n}\nconst ctx = $('Montar Prompt').item.json;\nreturn [{ json: {\n  resposta: parsed.resposta ?? 'Desculpe, pode repetir?',\n  intencao: parsed.intencao ?? 'fora_escopo',\n  telefone: ctx.telefone,\n  nome_cliente: ctx.nome_cliente,\n  canal: ctx.canal,\n  cliente_id: ctx.cliente_id,\n  mensagem_original: ctx.mensagem\n}}];"
+      }
+    },
+    {
+      "id": "n1-switch-intencao",
+      "name": "Switch Intencao",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1780, 360],
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+          "conditions": [{"leftValue": "={{ $json.intencao }}", "rightValue": "fazer_pedido", "operator": {"type": "string", "operation": "equals"}}],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n1-acionar-pedido",
+      "name": "Acionar Fluxo Pedido",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 240],
+      "parameters": {
+        "method": "POST",
+        "url": "https://apps-n8n-start.ugykfn.easypanel.host/webhook/fechamento-pedido",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({telefone: $json.telefone, nome_cliente: $json.nome_cliente, canal: $json.canal, mensagem: $json.mensagem_original, historico: [], dados_parciais: {}}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n1-enviar-wpp",
+      "name": "Enviar Resposta WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 460],
+      "parameters": {
+        "method": "POST",
+        "url": "https://evo.evoapi.shop/message/sendText/Araujo",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "apikey", "value": "EVOLUTION_API_KEY"}]},
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({number: $json.telefone, text: $json.resposta}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n1-acionar-handoff",
+      "name": "Acionar Handoff Humano",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2220, 460],
+      "parameters": {
+        "method": "POST",
+        "url": "https://apps-n8n-start.ugykfn.easypanel.host/webhook/handoff-humano",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({tipo: 'humano', nome: $json.nome_cliente, telefone: $json.telefone, canal: $json.canal, ultimas_mensagens: [$json.mensagem_original]}) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n1-respond-ok",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2440, 360],
+      "parameters": {"respondWith": "json", "responseBody": "{\"ok\": true}"}
+    }
+  ],
+  "connections": {
+    "Webhook Entrada":            {"main": [[{"node": "Normalizar Payload",          "type": "main", "index": 0}]]},
+    "Normalizar Payload":         {"main": [[{"node": "Follow-up ou Atendimento",    "type": "main", "index": 0}]]},
+    "Follow-up ou Atendimento": {
+      "main": [
+        [{"node": "Enviar Follow-up WhatsApp", "type": "main", "index": 0}],
+        [{"node": "Buscar Cliente Supabase",   "type": "main", "index": 0}]
+      ]
+    },
+    "Enviar Follow-up WhatsApp":  {"main": [[{"node": "Respond Follow-up OK",       "type": "main", "index": 0}]]},
+    "Buscar Cliente Supabase":    {"main": [[{"node": "Montar Prompt",              "type": "main", "index": 0}]]},
+    "Buscar Catalogo Hub":        {"main": [[{"node": "Montar Prompt",              "type": "main", "index": 0}]]},
+    "Montar Prompt":              {"main": [[{"node": "Agente IA Atendimento",      "type": "main", "index": 0}]]},
+    "Agente IA Atendimento":      {"main": [[{"node": "Parse Resposta IA",          "type": "main", "index": 0}]]},
+    "Parse Resposta IA":          {"main": [[{"node": "Switch Intencao",            "type": "main", "index": 0}]]},
+    "Switch Intencao": {
+      "main": [
+        [{"node": "Acionar Fluxo Pedido",     "type": "main", "index": 0}],
+        [{"node": "Enviar Resposta WhatsApp", "type": "main", "index": 0}]
+      ]
+    },
+    "Acionar Fluxo Pedido":       {"main": [[{"node": "Respond OK",                "type": "main", "index": 0}]]},
+    "Enviar Resposta WhatsApp":   {"main": [[{"node": "Acionar Handoff Humano",    "type": "main", "index": 0}]]},
+    "Acionar Handoff Humano":     {"main": [[{"node": "Respond OK",                "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"}
+}

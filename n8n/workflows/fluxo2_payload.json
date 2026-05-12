@@ -1,0 +1,268 @@
+{
+  "id": "fmYqq9lCHX6hgQzv",
+  "name": "Fluxo 2 — Fechamento de Pedido",
+  "active": true,
+  "isArchived": false,
+  "createdAt": "2026-05-06T23:44:03.835Z",
+  "updatedAt": "2026-05-06T23:44:22.208Z",
+  "versionId": "e978742f-27a5-4007-87e6-43746bf94787",
+  "nodes": [
+    {
+      "id": "node-wh-pedido",
+      "name": "Webhook Pedido",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [240, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fechamento-pedido",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "d8921ea7-f64c-4790-ac2c-dc6782677a42"
+    },
+    {
+      "id": "node-buscar-estado",
+      "name": "Buscar Estado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [460, 200],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://n8n.evoapi.shop/api/v1/data-tables/jQ5Ol9nLxqo1fUH4/rows",
+        "authentication": "none",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "filter[telefone][eq]", "value": "={{ $json.body.telefone }}" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-N8N-API-KEY", "value": "={{ $vars.N8N_API_KEY }}" }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-buscar-catalogo",
+      "name": "Buscar Catalogo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [460, 400],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/produtos",
+        "authentication": "none",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "ativo", "value": "eq.true" },
+            { "name": "select", "value": "id,nome,preco,unidade" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_ROLE_KEY }}" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-ia-pedido",
+      "name": "IA Coleta Pedido",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [700, 300],
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=Você está coletando um pedido para a loja.\n\nCatálogo (use os IDs exatos):\n{{ JSON.stringify($('Buscar Catalogo').item.json) }}\n\nEstado atual do pedido: {{ $('Buscar Estado').item.json.rows && $('Buscar Estado').item.json.rows[0] ? $('Buscar Estado').item.json.rows[0].dados_parciais : '{}' }}\nHistórico da conversa: {{ $('Buscar Estado').item.json.rows && $('Buscar Estado').item.json.rows[0] ? $('Buscar Estado').item.json.rows[0].historico : '[]' }}\nNova mensagem do cliente: {{ $('Webhook Pedido').item.json.body.mensagem }}\n\nColete: itens_pedido (produto_id, nome, quantidade, preco_unitario), endereco_entrega, forma_pagamento (pix/dinheiro/cartao_credito), observacoes.\n\nRetorne SOMENTE JSON válido:\n{\"resposta\": \"...\", \"pedido_completo\": true|false, \"dados_coletados\": {\"itens_pedido\": [], \"endereco_entrega\": \"\", \"forma_pagamento\": \"\", \"observacoes\": \"\"}}"
+            },
+            {
+              "role": "user",
+              "content": "={{ $('Webhook Pedido').item.json.body.mensagem }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "xxXa5gXpf4dM4Smm",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "node-parse-merge",
+      "name": "Parse e Merge Estado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 300],
+      "parameters": {
+        "jsCode": "const iaRaw = $('IA Coleta Pedido').item.json.message.content;\nconst ia = JSON.parse(iaRaw);\n\nconst estadoRows = $('Buscar Estado').item.json.rows || [];\nconst estadoRow = estadoRows[0] || {};\nconst estadoAnterior = JSON.parse(estadoRow.dados_parciais || '{}');\nconst historicoAnterior = JSON.parse(estadoRow.historico || '[]');\nconst turnos = (estadoRow.turnos || 0) + 1;\n\nconst telefone = $('Webhook Pedido').item.json.body.telefone;\nconst mensagem = $('Webhook Pedido').item.json.body.mensagem;\nconst nome_cliente = $('Webhook Pedido').item.json.body.nome_cliente || '';\n\n// Merge dados coletados com estado anterior\nconst dadosColetados = ia.dados_coletados || {};\nconst dadosMergados = {\n  itens_pedido: dadosColetados.itens_pedido?.length ? dadosColetados.itens_pedido : (estadoAnterior.itens_pedido || []),\n  endereco_entrega: dadosColetados.endereco_entrega || estadoAnterior.endereco_entrega || '',\n  forma_pagamento: dadosColetados.forma_pagamento || estadoAnterior.forma_pagamento || '',\n  observacoes: dadosColetados.observacoes || estadoAnterior.observacoes || ''\n};\n\nconst historicoNovo = [...historicoAnterior, { role: 'user', content: mensagem }, { role: 'assistant', content: ia.resposta }];\n\nconst limite_atingido = turnos >= 8;\n\nreturn [{\n  json: {\n    telefone,\n    nome_cliente,\n    resposta: ia.resposta,\n    pedido_completo: ia.pedido_completo === true,\n    limite_atingido,\n    dados_parciais: dadosMergados,\n    historico: historicoNovo,\n    turnos,\n    row_id: estadoRow.id || null\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-salvar-estado",
+      "name": "Salvar Estado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 300],
+      "parameters": {
+        "jsCode": "const dados = $input.first().json;\nconst baseUrl = 'https://n8n.evoapi.shop/api/v1/data-tables/jQ5Ol9nLxqo1fUH4/rows';\nconst apiKey = $vars.N8N_API_KEY;\n\nconst body = {\n  telefone: dados.telefone,\n  historico: JSON.stringify(dados.historico),\n  dados_parciais: JSON.stringify(dados.dados_parciais),\n  turnos: dados.turnos,\n  atualizado_em: new Date().toISOString()\n};\n\nif (dados.row_id) {\n  // Update existente\n  await $helpers.httpRequest({\n    method: 'PATCH',\n    url: `${baseUrl}/${dados.row_id}`,\n    headers: { 'X-N8N-API-KEY': apiKey, 'Content-Type': 'application/json' },\n    body: JSON.stringify(body)\n  });\n} else {\n  // Insert novo\n  await $helpers.httpRequest({\n    method: 'POST',\n    url: baseUrl,\n    headers: { 'X-N8N-API-KEY': apiKey, 'Content-Type': 'application/json' },\n    body: JSON.stringify(body)\n  });\n}\n\nreturn [$input.first()];"
+      }
+    },
+    {
+      "id": "node-if-completo",
+      "name": "Pedido Completo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1380, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-completo",
+              "leftValue": "={{ $json.pedido_completo || $json.limite_atingido }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "or"
+        }
+      }
+    },
+    {
+      "id": "node-confirmar-hub",
+      "name": "Confirmar Hub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1600, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.HUB_URL }}/api/webhooks/n8n",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-n8n-secret", "value": "={{ $vars.N8N_WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tipo\": \"{{ $json.pedido_completo ? 'pedido_confirmado' : 'sem_resposta' }}\",\n  \"handoff\": {\n    \"nome\": \"{{ $json.nome_cliente }}\",\n    \"telefone\": \"{{ $json.telefone }}\",\n    \"canal_origem\": \"whatsapp\",\n    \"etapa\": \"{{ $json.pedido_completo ? 'pedido_gerado' : 'follow_up' }}\",\n    \"ultimas_mensagens\": {{ JSON.stringify($json.historico.slice(-4).map(h => h.content)) }},\n    \"itens_pedido\": {{ JSON.stringify($json.dados_parciais.itens_pedido || []) }},\n    \"proxima_acao\": \"{{ $json.pedido_completo ? 'Preparar pedido para separação' : 'Aguardar retorno do cliente' }}\"\n  }\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-limpar-estado",
+      "name": "Limpar Estado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1820, 200],
+      "parameters": {
+        "jsCode": "const rowId = $('Parse e Merge Estado').item.json.row_id;\nif (rowId) {\n  await $helpers.httpRequest({\n    method: 'DELETE',\n    url: `https://n8n.evoapi.shop/api/v1/data-tables/jQ5Ol9nLxqo1fUH4/rows/${rowId}`,\n    headers: { 'X-N8N-API-KEY': $vars.N8N_API_KEY }\n  });\n}\nreturn [$input.first()];"
+      }
+    },
+    {
+      "id": "node-enviar-prox",
+      "name": "Enviar Prox Pergunta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1600, 400],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.EVOLUTION_API_URL }}/message/sendText/{{ $vars.EVOLUTION_INSTANCE }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.EVOLUTION_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"number\": \"{{ $('Parse e Merge Estado').item.json.telefone }}\", \"text\": \"{{ $('Parse e Merge Estado').item.json.resposta }}\"}",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-respond-pedido",
+      "name": "Respond Pedido OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [2040, 300],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true }"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Pedido": {
+      "main": [[{ "node": "Buscar Estado", "type": "main", "index": 0 }]]
+    },
+    "Buscar Estado": {
+      "main": [[{ "node": "Buscar Catalogo", "type": "main", "index": 0 }]]
+    },
+    "Buscar Catalogo": {
+      "main": [[{ "node": "IA Coleta Pedido", "type": "main", "index": 0 }]]
+    },
+    "IA Coleta Pedido": {
+      "main": [[{ "node": "Parse e Merge Estado", "type": "main", "index": 0 }]]
+    },
+    "Parse e Merge Estado": {
+      "main": [[{ "node": "Salvar Estado", "type": "main", "index": 0 }]]
+    },
+    "Salvar Estado": {
+      "main": [[{ "node": "Pedido Completo?", "type": "main", "index": 0 }]]
+    },
+    "Pedido Completo?": {
+      "main": [
+        [{ "node": "Confirmar Hub", "type": "main", "index": 0 }],
+        [{ "node": "Enviar Prox Pergunta", "type": "main", "index": 0 }]
+      ]
+    },
+    "Confirmar Hub": {
+      "main": [[{ "node": "Limpar Estado", "type": "main", "index": 0 }]]
+    },
+    "Limpar Estado": {
+      "main": [[{ "node": "Respond Pedido OK", "type": "main", "index": 0 }]]
+    },
+    "Enviar Prox Pergunta": {
+      "main": [[{ "node": "Respond Pedido OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

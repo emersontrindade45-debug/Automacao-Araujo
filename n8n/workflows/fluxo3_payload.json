@@ -1,0 +1,217 @@
+{
+  "updatedAt": "2026-05-06T23:32:49.703Z",
+  "createdAt": "2026-05-06T23:32:35.960Z",
+  "id": "ayAye8I7ms0CaNGq",
+  "name": "Fluxo 3 — Handoff para Humano",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "node-webhook-handoff",
+      "name": "Webhook Handoff",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [240, 300],
+      "parameters": {
+        "path": "handoff-humano",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "48372946-620d-4d6a-8fd0-52046cc8f533",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-switch-tipo",
+      "name": "Switch Tipo",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "outputKey": "sem_resposta",
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "sw-sr-1",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.body.tipo }}",
+                    "rightValue": "sem_resposta"
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "humano",
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "sw-h-1",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.body.tipo }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": 1
+        }
+      }
+    },
+    {
+      "id": "node-hub-sem-resposta",
+      "name": "Hub sem_resposta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [700, 160],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.HUB_URL }}/api/webhooks/n8n",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tipo\": \"sem_resposta\",\n  \"atendente_email\": \"{{ $('Webhook Handoff').item.json.body.atendente_email }}\",\n  \"handoff\": {\n    \"nome\": \"{{ $('Webhook Handoff').item.json.body.nome }}\",\n    \"telefone\": \"{{ $('Webhook Handoff').item.json.body.telefone }}\",\n    \"canal_origem\": \"{{ $('Webhook Handoff').item.json.body.canal }}\",\n    \"etapa\": \"follow_up\",\n    \"ultimas_mensagens\": {{ JSON.stringify($('Webhook Handoff').item.json.body.ultimas_mensagens || []) }},\n    \"proxima_acao\": \"Aguardar resposta do cliente\"\n  }\n}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MLDwzmH6rd5fQwZm",
+          "name": "Hub N8n Secret"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-hub-ambiguo",
+      "name": "Hub ambiguo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [700, 440],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.HUB_URL }}/api/webhooks/n8n",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tipo\": \"ambiguo\",\n  \"atendente_email\": \"{{ $('Webhook Handoff').item.json.body.atendente_email }}\",\n  \"handoff\": {\n    \"nome\": \"{{ $('Webhook Handoff').item.json.body.nome }}\",\n    \"telefone\": \"{{ $('Webhook Handoff').item.json.body.telefone }}\",\n    \"canal_origem\": \"{{ $('Webhook Handoff').item.json.body.canal }}\",\n    \"etapa\": \"atendimento\",\n    \"ultimas_mensagens\": {{ JSON.stringify($('Webhook Handoff').item.json.body.ultimas_mensagens || []) }},\n    \"proxima_acao\": \"Atendente humano assumir conversa\"\n  }\n}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MLDwzmH6rd5fQwZm",
+          "name": "Hub N8n Secret"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-avisar-cliente",
+      "name": "Avisar Cliente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [940, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.EVOLUTION_API_URL }}/message/sendText/{{ $vars.EVOLUTION_INSTANCE }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $('Webhook Handoff').item.json.body.telefone }}\",\n  \"text\": \"Aguarde, um atendente irá continuar o seu atendimento em breve. 😊\"\n}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "a8nTmqXTRpC8LVxc",
+          "name": "Evolution API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-respond-ok",
+      "name": "Respond Handoff OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1160, 300],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true }",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Handoff": {
+      "main": [
+        [{ "node": "Switch Tipo", "type": "main", "index": 0 }]
+      ]
+    },
+    "Switch Tipo": {
+      "main": [
+        [{ "node": "Hub sem_resposta", "type": "main", "index": 0 }],
+        [{ "node": "Hub ambiguo", "type": "main", "index": 0 }]
+      ]
+    },
+    "Hub sem_resposta": {
+      "main": [
+        [{ "node": "Avisar Cliente", "type": "main", "index": 0 }]
+      ]
+    },
+    "Hub ambiguo": {
+      "main": [
+        [{ "node": "Avisar Cliente", "type": "main", "index": 0 }]
+      ]
+    },
+    "Avisar Cliente": {
+      "main": [
+        [{ "node": "Respond Handoff OK", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "f7a5ad26-a25d-4793-9043-c88f97bbf2ce",
+  "tags": []
+}

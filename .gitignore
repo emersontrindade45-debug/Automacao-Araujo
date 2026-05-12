@@ -49,3 +49,10 @@ supabase/.temp/
 
 # MCP config (contém API keys)
 .mcp.json
+
+# Temporary n8n workflow downloads
+n8n/workflows/fluxo*_current*.json
+n8n/workflows/fluxo*_fixed.json
+n8n/workflows/fluxo*_final.json
+n8n/workflows/fluxo*_put*.json
+n8n/workflows/fluxo*_upload.json

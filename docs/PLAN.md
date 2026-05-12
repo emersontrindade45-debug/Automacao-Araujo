@@ -305,57 +305,47 @@ M1 (interface base) → M2 (CRM com mock) → M3 (banco + auth real)
 
 #### Fluxo 1 — Atendimento Principal (WhatsApp / Instagram → IA → Resposta)
 
-- [ ] Criar workflow **"Atendimento Principal"** no N8n
-- [ ] **Nó Webhook (Trigger):** recebe payload do Hub após `/api/webhooks/whatsapp` ou `/api/webhooks/instagram` (Hub dispara evento ao N8n após upsert do cliente)
-- [ ] **Nó HTTP Request:** busca contexto do cliente no Supabase (`GET /rest/v1/clientes?telefone=eq.{{telefone}}&select=*`)
-- [ ] **Nó HTTP Request:** busca catálogo de produtos ativos (`GET /rest/v1/produtos?ativo=eq.true&select=nome,preco_atual,unidade`)
-- [ ] **Nó OpenAI Chat Model (GPT-4o):** system prompt contendo:
-  - Identidade da loja (nome, horário, endereço)
-  - Catálogo de produtos com preços (injetado dinamicamente)
-  - Etapa atual do cliente e histórico das últimas mensagens
-  - Instrução: identificar intenção e responder naturalmente como atendente
-  - Output estruturado: `{ resposta: string, intencao: "saudacao" | "consulta_preco" | "fazer_pedido" | "fora_escopo" | "humano" }`
-- [ ] **Nó Switch:** ramifica pelo campo `intencao` retornado pela IA
-- [ ] **Nó HTTP Request (Meta Graph API):** envia `resposta` ao cliente via WhatsApp ou Instagram (`POST https://graph.facebook.com/v19.0/{phone_number_id}/messages`)
-- [ ] **Nó Set:** registra `intencao` e `cliente_id` para uso nas ramificações seguintes
+- [x] Criar workflow **"Atendimento Principal"** no N8n (ID: `OM5p23yhXYNjCVxQ`, ATIVO)
+- [x] **Nó Webhook (Trigger):** recebe payload da Evolution API em `/webhook/araujo-entrada`
+- [x] **Nó HTTP Request:** busca contexto do cliente no Supabase (`GET /rest/v1/clientes?telefone=eq.{{telefone}}`)
+- [x] **Nó HTTP Request:** busca catálogo de produtos via Hub (`GET /api/produtos`)
+- [x] **Nó OpenAI (GPT-4o):** prompt completo com catálogo, etapa e instrução de retornar JSON `{resposta, intencao}`
+- [x] **Nó IF:** ramifica por `intencao` (`fazer_pedido` → Fluxo 2, demais → resposta direta)
+- [x] **Nó HTTP Request (Evolution API):** envia `resposta` ao cliente via WhatsApp
+- [x] **Nó IF (follow_up):** curto-circuito para follow-ups — envia diretamente sem chamar IA
 
 #### Fluxo 2 — Fechamento de Pedido (coleta estruturada via IA)
 
 Acionado quando `intencao = "fazer_pedido"`:
 
-- [ ] Criar workflow **"Fechamento de Pedido"** (ou sub-fluxo do Fluxo 1)
-- [ ] **Nó OpenAI (GPT-4o com function calling):** conduz conversa em múltiplos turnos para coletar:
-  - Lista de itens e quantidades
-  - Endereço de entrega
-  - Forma de pagamento
-  - Observações
-  - Function: `confirmar_pedido({ itens, endereco, forma_pagamento, observacoes })`
-- [ ] **Nó IF:** verifica se todos os campos obrigatórios foram extraídos
-- [ ] **Nó HTTP Request:** chama `POST /api/webhooks/n8n` com body (ver exemplo no `docs/N8N.md`) — `tipo: "pedido_confirmado"` + `HandoffPayload` completo com itens, endereço e forma de pagamento
-- [ ] **Nó HTTP Request (Meta Graph API):** envia resumo do pedido ao cliente com confirmação
+- [x] Criar workflow **"Fechamento de Pedido"** (ID: `rnv9wmmIUx4RyRvq`, ATIVO)
+- [x] **Nó OpenAI Agent (GPT-4o):** conduz conversa em múltiplos turnos para coletar itens, endereço, pagamento e observações
+- [x] **Nó IF:** verifica se `pedido_completo = true`
+- [x] **Nó HTTP Request:** chama `POST /api/webhooks/n8n` com `tipo: "pedido_confirmado"` quando completo
+- [x] **Nó HTTP Request (Evolution API):** envia resposta/solicitação ao cliente a cada turno
 
 #### Fluxo 3 — Handoff para Humano
 
 Acionado quando `intencao = "humano"` ou após N turnos sem conclusão:
 
-- [ ] **Nó HTTP Request:** chama `POST /api/webhooks/n8n` com `tipo: "ambiguo"` ou `tipo: "sem_resposta"`
-- [ ] **Nó HTTP Request (Meta Graph API):** envia mensagem padrão ao cliente: "Aguarde, um atendente irá continuar o seu atendimento em breve."
+- [x] Criar workflow **"Handoff para Humano"** (ID: `dQLYeN7LLiM8oQbN`, ATIVO)
+- [x] **Nó HTTP Request:** chama `POST /api/webhooks/n8n` com `tipo: "ambiguo"`
+- [x] **Nó HTTP Request (Evolution API):** envia mensagem padrão ao cliente informando que atendente assumirá
 
 #### Fluxo 4 — Follow-up Automático (Cron)
 
-- [ ] Criar workflow **"Follow-up Cron"** no N8n
-- [ ] **Nó Schedule Trigger:** configura execução diária (ex: 09:00, horário de Brasília)
-- [ ] **Nó HTTP Request:** chama `POST /api/followup` com header `x-cron-secret: {{CRON_SECRET}}`
-- [ ] **Nó IF:** verifica status da resposta (`ok: true`) e registra resultado
-- [ ] **Nó Set (erro):** registra falha no log interno do N8n caso o endpoint retorne erro
+- [x] Criar workflow **"Follow-up Cron"** (ID: `9PmgWdUIJ1v42gdk`, ATIVO)
+- [x] **Nó Schedule Trigger:** execução diária às 09:00, segunda a sábado (`0 9 * * 1-6`)
+- [x] **Nó HTTP Request:** chama `POST /api/followup` com header `x-cron-secret`
+- [x] **Nó IF:** verifica status da resposta (`ok: true`) e registra resultado em Log Sucesso/Erro
 
 #### Fluxo 5 — Notificação de Preço Aprovado
 
-Acionado quando Hub chama `N8N_WEBHOOK_PRICE_UPDATE_URL` (após aprovar preço):
+Acionado quando Hub chama o webhook de notificação de preço:
 
-- [ ] Criar workflow **"Notificação de Preço"** no N8n
-- [ ] **Nó Webhook (Trigger):** recebe payload `{ tipo: "atualizacao_preco", produto_nome, preco_novo, solicitado_por }`
-- [ ] **Nó HTTP Request (Meta Graph API):** envia mensagem ao número de `solicitado_por` (telefone): `"✅ Preço de [produto] atualizado para R$ [valor] e já está ativo no sistema."`
+- [x] Criar workflow **"Notificação de Preço Aprovado"** (ID: `Jkz0rL9Yum1ErXij`, ATIVO)
+- [x] **Nó Webhook (Trigger):** recebe payload `{ produto_nome, preco_novo, solicitado_por }`
+- [x] **Nó HTTP Request (Evolution API):** envia mensagem ao número de `solicitado_por` com preço atualizado
 
 #### Setup de Ferramentas MCP (pré-requisito)
 
@@ -366,20 +356,15 @@ Acionado quando Hub chama `N8N_WEBHOOK_PRICE_UPDATE_URL` (após aprovar preço):
 
 #### Configuração e Credenciais
 
-- [ ] Configurar credencial **OpenAI** no N8n (`API Key` → `OPENAI_API_KEY`)
-- [ ] Configurar credencial **HTTP Header Auth** com `x-n8n-secret` para validar chamadas de entrada do Hub
-- [ ] Configurar credencial **HTTP Header Auth** com `Authorization: Bearer {{WHATSAPP_TOKEN}}` para chamadas à Meta Graph API
-- [ ] Configurar variáveis de ambiente no N8n:
-  - `HUB_URL` — URL base do Hub (ex: `https://araujo-hub.vercel.app`)
-  - `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` — acesso ao banco
-  - `WHATSAPP_PHONE_NUMBER_ID` — ID do número WhatsApp Business
-  - `INSTAGRAM_PAGE_ID` — ID da página Instagram
-  - `CRON_SECRET` — secret para o endpoint de follow-up
-- [ ] Exportar todos os workflows como JSON e salvar em `n8n/workflows/` no repositório
-- [ ] Documentar em `docs/N8N-FLOWS.md`:
-  - Mapa visual de cada fluxo (diagrama texto)
-  - Lista de variáveis necessárias e onde configurar
-  - Instruções de importação dos workflows no N8n
+- [x] Configurar credencial **OpenAI** no N8n (`API Key` → `OPENAI_API_KEY`, ID: `w8nIui9qhEXhVDh4`)
+- [x] Configurar credencial **HTTP Header Auth** `Hub N8n Secret` para validar chamadas de entrada do Hub
+- [x] Configurar credencial **HTTP Header Auth** `Evolution API` com apikey para chamadas à Evolution API
+- [x] Valores hardcoded nos nodes (N8N_BLOCK_ENV_ACCESS_IN_NODE=true no Easypanel impede uso de $env):
+  - `HUB_URL` → `https://araujo-hub.vercel.app`
+  - `SUPABASE_URL` → `https://zziapgnenvugyvrgrhrs.supabase.co`
+  - `CRON_SECRET` → `cron-secret-araujo-2026`
+- [x] Exportar todos os workflows como JSON e salvar em `n8n/workflows/` no repositório
+- [x] Documentar em `docs/N8N-FLOWS.md` com IDs, URLs e instruções de importação
 
 **Commit final:**
 

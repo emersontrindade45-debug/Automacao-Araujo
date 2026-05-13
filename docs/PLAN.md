@@ -283,6 +283,7 @@ feat(M6): deploy em produção e go-live validado
 M1 (interface base) → M2 (CRM com mock) → M3 (banco + auth real)
       → M4 (webhooks + N8n) → M5 (preços + follow-up) → M6 (deploy)
       → M7 (fluxos N8n com IA)  ← pode rodar em paralelo a M6
+      → M8 (catálogo editável + Realtime)  ← concluído
 ```
 
 > **Princípio:** interface antes de backend. Validar a experiência com dados mockados antes de investir em integrações. Cada milestone entrega valor independente e pode ser demonstrada ao cliente.
@@ -371,6 +372,35 @@ Acionado quando Hub chama o webhook de notificação de preço:
 ```text
 feat(M7): fluxos N8n com IA — atendimento, fechamento, handoff e follow-up
 ```
+
+---
+
+---
+
+## M8 — Catálogo Editável, Estoque e Realtime
+
+**Branch:** `main`
+
+**Objetivo:** Transformar `/precos` em ponto central de gestão — catálogo editável inline, campo de estoque, importação via planilha e sincronização bidirecional em tempo real com o Supabase.
+
+### Entregas
+
+- [x] Adicionar campo `estoque_atual` (int4) à tabela `produtos` no Supabase
+- [x] Atualizar tipo `Produto` em `lib/types/index.ts` com `estoque_atual: number`
+- [x] Adicionar queries `updateProduto`, `upsertProdutosEmLote`, `LinhaPlanilha` em `lib/supabase/queries/produtos.ts`
+- [x] Adicionar Server Actions `editarProdutoAction`, `importarProdutosAction` em `app/(crm)/precos/actions.ts`
+- [x] Instalar `papaparse` e `xlsx` para parse de planilhas no cliente
+- [x] Criar `components/precos/catalogo-tab.tsx` — tabela editável inline (preço, estoque, ativo) com filtros por todas as colunas
+- [x] Criar `components/precos/importar-modal.tsx` — modal com parse CSV/XLSX, prévia e confirmação em lote
+- [x] Criar `components/precos/precos-page-client.tsx` — layout com abas Catálogo / Solicitações
+- [x] Atualizar `app/(crm)/precos/page.tsx` para buscar produtos em paralelo e renderizar abas
+- [x] Tornar status das solicitações editável a qualquer momento via select (pendente/aprovado/rejeitado)
+- [x] Adicionar `alterarStatusPrecoAction` para alterar status em qualquer direção
+- [x] Corrigir RLS: mutations de `precos` e `produtos` passam a usar `createAdminClient()` (service role)
+- [x] Habilitar `produtos` na publication `supabase_realtime` no Supabase dashboard
+- [x] Adicionar Supabase Realtime no `CatalogoTab` — sincronização automática ao receber UPDATE externo (N8n, dashboard, API)
+
+**Commits:** `1dcec44` → `dd89235`
 
 ---
 

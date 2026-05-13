@@ -106,7 +106,7 @@ Status do funil:
 8. Follow-up
 9. Marketing/Ofertas
 
-### 4.5 Atualização de Preços
+### 4.5 Atualização de Preços e Estoque
 
 Via WhatsApp (texto ou áudio):
 
@@ -114,6 +114,16 @@ Via WhatsApp (texto ou áudio):
 2. Interpretar
 3. Validar
 4. Aplicar
+
+**Via Hub (manual):**
+
+- Editar inline na tabela de Catálogo (`/precos` → aba Catálogo)
+- Importar planilha CSV/XLSX em lote
+
+**Via N8n (automático):**
+
+- Fluxo N8n atualiza `preco_atual` / `estoque_atual` direto no Supabase
+- Hub reflete a mudança em tempo real via Supabase Realtime (sem recarregar a página)
 
 ---
 

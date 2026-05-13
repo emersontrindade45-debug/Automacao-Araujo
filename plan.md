@@ -17,5 +17,14 @@
 
 ## Próximos Passos
 
-- [ ] Elaborar fluxos n8n com IA (atendimento, fechamento, handoff, follow-up)
-- [ ] Integrar Supabase com fluxos n8n (projeto "Atendimento Whats")
+- [x] Elaborar fluxos n8n com IA (atendimento, fechamento, handoff, follow-up) — M7 concluído
+- [x] Integrar Supabase com fluxos n8n — Realtime ativo em `produtos`, mutations via service role
+
+## M8 — Concluído (2026-05-13)
+
+- [x] Catálogo de produtos editável inline (preço, estoque, ativo) na página `/precos`
+- [x] Filtros por todas as colunas (nome, unidade, preço, estoque, status)
+- [x] Importação em lote via CSV/XLSX com prévia e validação
+- [x] Status das solicitações de preço editável em qualquer direção (pendente/aprovado/rejeitado)
+- [x] Fix RLS: mutations usam `createAdminClient()` com service role
+- [x] Supabase Realtime em `produtos` — Hub atualiza automaticamente quando N8n ou dashboard alteram o banco

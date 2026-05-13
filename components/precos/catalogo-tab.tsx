@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import type { Produto } from "@/lib/types";
 import { editarProdutoAction } from "@/app/(crm)/precos/actions";
 import { Button } from "@/components/ui/button";
@@ -20,12 +20,61 @@ interface EditState {
   ativo: boolean;
 }
 
+interface Filtros {
+  nome: string;
+  unidade: string;
+  precoMin: string;
+  precoMax: string;
+  estoqueMin: string;
+  estoqueMax: string;
+  ativo: "" | "true" | "false";
+}
+
+const filtrosIniciais: Filtros = {
+  nome: "",
+  unidade: "",
+  precoMin: "",
+  precoMax: "",
+  estoqueMin: "",
+  estoqueMax: "",
+  ativo: "",
+};
+
 export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
   const [produtos, setProdutos] = useState<Produto[]>(inicial);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<EditState | null>(null);
   const [importarAberto, setImportarAberto] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [filtros, setFiltros] = useState<Filtros>(filtrosIniciais);
+
+  const unidades = useMemo(
+    () => Array.from(new Set(produtos.map((p) => p.unidade))).sort(),
+    [produtos]
+  );
+
+  const filtrados = useMemo(() => {
+    return produtos.filter((p) => {
+      if (filtros.nome && !p.nome.toLowerCase().includes(filtros.nome.toLowerCase())) return false;
+      if (filtros.unidade && p.unidade !== filtros.unidade) return false;
+      if (filtros.precoMin !== "" && p.preco_atual < parseFloat(filtros.precoMin)) return false;
+      if (filtros.precoMax !== "" && p.preco_atual > parseFloat(filtros.precoMax)) return false;
+      if (filtros.estoqueMin !== "" && p.estoque_atual < parseFloat(filtros.estoqueMin)) return false;
+      if (filtros.estoqueMax !== "" && p.estoque_atual > parseFloat(filtros.estoqueMax)) return false;
+      if (filtros.ativo !== "" && String(p.ativo) !== filtros.ativo) return false;
+      return true;
+    });
+  }, [produtos, filtros]);
+
+  const temFiltroAtivo = Object.values(filtros).some((v) => v !== "");
+
+  function setFiltro<K extends keyof Filtros>(key: K, value: Filtros[K]) {
+    setFiltros((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function limparFiltros() {
+    setFiltros(filtrosIniciais);
+  }
 
   function iniciarEdicao(produto: Produto) {
     setEditandoId(produto.id);
@@ -67,13 +116,106 @@ export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
 
   const podeEditar = !pending;
 
+  const inputCls = "h-8 w-full border border-border rounded-md px-2 text-xs bg-surface text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand";
+  const selectCls = "h-8 w-full border border-border rounded-md px-2 text-xs bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-brand";
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap flex-1">
+          {/* Nome */}
+          <input
+            type="text"
+            placeholder="Buscar por nome..."
+            value={filtros.nome}
+            onChange={(e) => setFiltro("nome", e.target.value)}
+            className={`${inputCls} min-w-40 max-w-56`}
+          />
+          {/* Unidade */}
+          <select
+            value={filtros.unidade}
+            onChange={(e) => setFiltro("unidade", e.target.value)}
+            className={`${selectCls} w-32`}
+          >
+            <option value="">Unidade</option>
+            {unidades.map((u) => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+          </select>
+          {/* Preço */}
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Preço mín"
+              value={filtros.precoMin}
+              onChange={(e) => setFiltro("precoMin", e.target.value)}
+              className={`${inputCls} w-24`}
+            />
+            <span className="text-xs text-muted">–</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Preço máx"
+              value={filtros.precoMax}
+              onChange={(e) => setFiltro("precoMax", e.target.value)}
+              className={`${inputCls} w-24`}
+            />
+          </div>
+          {/* Estoque */}
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Estoque mín"
+              value={filtros.estoqueMin}
+              onChange={(e) => setFiltro("estoqueMin", e.target.value)}
+              className={`${inputCls} w-24`}
+            />
+            <span className="text-xs text-muted">–</span>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Estoque máx"
+              value={filtros.estoqueMax}
+              onChange={(e) => setFiltro("estoqueMax", e.target.value)}
+              className={`${inputCls} w-24`}
+            />
+          </div>
+          {/* Ativo */}
+          <select
+            value={filtros.ativo}
+            onChange={(e) => setFiltro("ativo", e.target.value as Filtros["ativo"])}
+            className={`${selectCls} w-28`}
+          >
+            <option value="">Status</option>
+            <option value="true">Ativo</option>
+            <option value="false">Inativo</option>
+          </select>
+          {/* Limpar */}
+          {temFiltroAtivo && (
+            <button
+              onClick={limparFiltros}
+              className="h-8 px-3 text-xs text-muted hover:text-foreground border border-border rounded-md bg-surface hover:bg-surface-subtle transition-colors"
+            >
+              Limpar
+            </button>
+          )}
+        </div>
         <Button variant="secondary" size="sm" onClick={() => setImportarAberto(true)}>
           Importar planilha
         </Button>
       </div>
+
+      {temFiltroAtivo && (
+        <p className="text-xs text-muted">
+          {filtrados.length} de {produtos.length} produto{produtos.length !== 1 ? "s" : ""}
+        </p>
+      )}
 
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <table className="w-full text-sm">
@@ -88,14 +230,14 @@ export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
             </tr>
           </thead>
           <tbody>
-            {produtos.length === 0 && (
+            {filtrados.length === 0 && (
               <tr>
                 <td colSpan={6} className="text-center py-10 text-muted text-sm">
-                  Nenhum produto encontrado.
+                  {temFiltroAtivo ? "Nenhum produto corresponde aos filtros." : "Nenhum produto encontrado."}
                 </td>
               </tr>
             )}
-            {produtos.map((produto) => {
+            {filtrados.map((produto) => {
               const emEdicao = editandoId === produto.id;
               const valoresEdicao = emEdicao ? editValues! : null;
               const precoInvalido = valoresEdicao !== null && (isNaN(valoresEdicao.preco_atual) || valoresEdicao.preco_atual < 0);

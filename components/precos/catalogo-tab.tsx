@@ -220,12 +220,12 @@ export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <table className="w-full text-sm table-fixed">
           <colgroup>
-            <col className="w-[35%]" />
+            <col className="w-[22%]" />
             <col className="w-[10%] hidden sm:table-column" />
-            <col className="w-[15%]" />
-            <col className="w-[15%]" />
-            <col className="w-[10%] hidden md:table-column" />
-            <col className="w-[15%]" />
+            <col className="w-[17%]" />
+            <col className="w-[17%]" />
+            <col className="w-[12%] hidden md:table-column" />
+            <col className="w-[22%]" />
           </colgroup>
           <thead>
             <tr className="border-b border-border bg-surface-subtle">

@@ -34,3 +34,37 @@ export async function updatePrecoProduto(id: string, preco_atual: number) {
 
   if (error) throw error;
 }
+
+export interface ProdutoUpdatePayload {
+  preco_atual: number;
+  estoque_atual: number;
+  ativo: boolean;
+}
+
+export async function updateProduto(id: string, payload: ProdutoUpdatePayload) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("produtos")
+    .update(payload)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export interface LinhaPlanilha {
+  produto_id: string;
+  preco_atual: number;
+  estoque_atual: number;
+}
+
+export async function upsertProdutosEmLote(linhas: LinhaPlanilha[]) {
+  const supabase = await createClient();
+  await Promise.all(
+    linhas.map(({ produto_id, preco_atual, estoque_atual }) =>
+      supabase
+        .from("produtos")
+        .update({ preco_atual, estoque_atual })
+        .eq("id", produto_id)
+        .throwOnError()
+    )
+  );
+}

@@ -29,6 +29,7 @@ export interface Produto {
   id: string;
   nome: string;
   preco_atual: number;
+  estoque_atual: number;
   unidade: string;
   ativo: boolean;
   criado_em: string;

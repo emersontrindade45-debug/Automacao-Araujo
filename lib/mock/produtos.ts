@@ -1,18 +1,18 @@
 import type { Produto, StatusPreco } from "@/lib/types";
 
 export const mockProdutos: Produto[] = [
-  { id: "p1", nome: "Alcatra (kg)", preco_atual: 52.9, unidade: "kg", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
-  { id: "p2", nome: "Frango Inteiro (kg)", preco_atual: 18.5, unidade: "kg", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
-  { id: "p3", nome: "Linguiça Toscana (kg)", preco_atual: 29.9, unidade: "kg", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
-  { id: "p4", nome: "Costela Bovina (kg)", preco_atual: 44.0, unidade: "kg", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
-  { id: "p5", nome: "Pão Francês (un)", preco_atual: 0.75, unidade: "un", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
-  { id: "p6", nome: "Pão de Forma (pacote)", preco_atual: 9.5, unidade: "pacote", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
-  { id: "p7", nome: "Queijo Mussarela (kg)", preco_atual: 49.9, unidade: "kg", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
-  { id: "p8", nome: "Presunto Cozido (kg)", preco_atual: 39.9, unidade: "kg", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
-  { id: "p9", nome: "Leite Integral 1L", preco_atual: 5.2, unidade: "L", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
-  { id: "p10", nome: "Arroz Branco 5kg", preco_atual: 28.9, unidade: "pacote", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
-  { id: "p11", nome: "Feijão Carioca 1kg", preco_atual: 9.9, unidade: "pacote", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
-  { id: "p12", nome: "Óleo de Soja 900ml", preco_atual: 7.5, unidade: "un", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
+  { id: "p1", nome: "Alcatra (kg)", preco_atual: 52.9, estoque_atual: 0, unidade: "kg", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
+  { id: "p2", nome: "Frango Inteiro (kg)", preco_atual: 18.5, estoque_atual: 0, unidade: "kg", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
+  { id: "p3", nome: "Linguiça Toscana (kg)", preco_atual: 29.9, estoque_atual: 0, unidade: "kg", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
+  { id: "p4", nome: "Costela Bovina (kg)", preco_atual: 44.0, estoque_atual: 0, unidade: "kg", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
+  { id: "p5", nome: "Pão Francês (un)", preco_atual: 0.75, estoque_atual: 0, unidade: "un", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
+  { id: "p6", nome: "Pão de Forma (pacote)", preco_atual: 9.5, estoque_atual: 0, unidade: "pacote", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
+  { id: "p7", nome: "Queijo Mussarela (kg)", preco_atual: 49.9, estoque_atual: 0, unidade: "kg", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
+  { id: "p8", nome: "Presunto Cozido (kg)", preco_atual: 39.9, estoque_atual: 0, unidade: "kg", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
+  { id: "p9", nome: "Leite Integral 1L", preco_atual: 5.2, estoque_atual: 0, unidade: "L", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
+  { id: "p10", nome: "Arroz Branco 5kg", preco_atual: 28.9, estoque_atual: 0, unidade: "pacote", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
+  { id: "p11", nome: "Feijão Carioca 1kg", preco_atual: 9.9, estoque_atual: 0, unidade: "pacote", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
+  { id: "p12", nome: "Óleo de Soja 900ml", preco_atual: 7.5, estoque_atual: 0, unidade: "un", ativo: true, criado_em: "2026-01-10T00:00:00Z" },
 ];
 
 export interface AtualizacaoPreco {

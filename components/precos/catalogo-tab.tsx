@@ -218,15 +218,23 @@ export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
       )}
 
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-fixed">
+          <colgroup>
+            <col className="w-[35%]" />
+            <col className="w-[10%] hidden sm:table-column" />
+            <col className="w-[15%]" />
+            <col className="w-[15%]" />
+            <col className="w-[10%] hidden md:table-column" />
+            <col className="w-[15%]" />
+          </colgroup>
           <thead>
             <tr className="border-b border-border bg-surface-subtle">
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wide">Nome</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wide hidden sm:table-cell">Unidade</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wide">Preço Atual</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wide">Estoque Atual</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wide hidden md:table-cell">Ativo</th>
-              <th className="px-4 py-3 w-36 text-right text-xs font-semibold text-muted uppercase tracking-wide">Ações</th>
+              <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide">Nome</th>
+              <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide hidden sm:table-cell">Unidade</th>
+              <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide">Preço</th>
+              <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide">Estoque</th>
+              <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide hidden md:table-cell">Status</th>
+              <th className="px-3 py-2.5 text-right text-xs font-semibold text-muted uppercase tracking-wide">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -244,11 +252,11 @@ export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
               const estoqueInvalido = valoresEdicao !== null && (isNaN(valoresEdicao.estoque_atual) || valoresEdicao.estoque_atual < 0);
 
               return (
-                <tr key={produto.id} className="border-b border-border last:border-0 hover:bg-surface-subtle transition-colors">
-                  <td className="px-4 py-3 font-medium text-foreground">{produto.nome}</td>
-                  <td className="px-4 py-3 text-muted hidden sm:table-cell">{produto.unidade}</td>
+                <tr key={produto.id} className="border-b border-border last:border-0 hover:bg-surface-subtle transition-colors group">
+                  <td className="px-3 py-2.5 font-medium text-foreground truncate">{produto.nome}</td>
+                  <td className="px-3 py-2.5 text-muted text-xs hidden sm:table-cell">{produto.unidade}</td>
 
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2.5">
                     {emEdicao ? (
                       <input
                         type="number"
@@ -256,14 +264,14 @@ export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
                         step="0.01"
                         value={valoresEdicao!.preco_atual}
                         onChange={(e) => setEditValues((v) => v ? { ...v, preco_atual: parseFloat(e.target.value) } : v)}
-                        className="w-28 border border-border rounded-md px-2 py-1 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-brand"
+                        className="w-full border border-brand rounded-md px-2 py-1 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-brand"
                       />
                     ) : (
-                      <span className="font-medium">{formatMoeda(produto.preco_atual)}</span>
+                      <span className="font-semibold text-foreground">{formatMoeda(produto.preco_atual)}</span>
                     )}
                   </td>
 
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2.5">
                     {emEdicao ? (
                       <input
                         type="number"
@@ -271,14 +279,14 @@ export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
                         step="1"
                         value={valoresEdicao!.estoque_atual}
                         onChange={(e) => setEditValues((v) => v ? { ...v, estoque_atual: parseInt(e.target.value, 10) } : v)}
-                        className="w-24 border border-border rounded-md px-2 py-1 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-brand"
+                        className="w-full border border-brand rounded-md px-2 py-1 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-brand"
                       />
                     ) : (
-                      <span>{produto.estoque_atual} {produto.unidade}</span>
+                      <span className="text-foreground">{produto.estoque_atual} <span className="text-muted text-xs">{produto.unidade}</span></span>
                     )}
                   </td>
 
-                  <td className="px-4 py-3 hidden md:table-cell">
+                  <td className="px-3 py-2.5 hidden md:table-cell">
                     {emEdicao ? (
                       <button
                         type="button"
@@ -296,15 +304,21 @@ export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
                         ].join(" ")} />
                       </button>
                     ) : (
-                      <span className={produto.ativo ? "text-success text-xs font-medium" : "text-muted text-xs"}>
+                      <span className={[
+                        "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full",
+                        produto.ativo
+                          ? "bg-[var(--success-bg,#f0fdf4)] text-success"
+                          : "bg-surface-subtle text-muted",
+                      ].join(" ")}>
+                        <span className={["h-1.5 w-1.5 rounded-full", produto.ativo ? "bg-success" : "bg-muted"].join(" ")} />
                         {produto.ativo ? "Ativo" : "Inativo"}
                       </span>
                     )}
                   </td>
 
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-3 py-2.5 text-right">
                     {emEdicao ? (
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1.5">
                         <Button size="sm" variant="ghost" onClick={cancelarEdicao}>
                           Cancelar
                         </Button>
@@ -318,14 +332,17 @@ export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
                         </Button>
                       </div>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="secondary"
+                      <button
                         disabled={!podeEditar}
                         onClick={() => iniciarEdicao(produto)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-surface text-foreground hover:bg-brand hover:text-white hover:border-brand transition-colors disabled:opacity-40"
                       >
+                        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
                         Editar
-                      </Button>
+                      </button>
                     )}
                   </td>
                 </tr>

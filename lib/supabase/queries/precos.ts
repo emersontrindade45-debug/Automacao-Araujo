@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { StatusPreco } from "@/lib/types";
 
 export interface AtualizacaoPreco {
@@ -46,7 +47,7 @@ export async function countPrecosPendentes() {
 }
 
 export async function updateStatusPreco(id: string, status: StatusPreco) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("precos")
     .update({ status })
@@ -56,7 +57,7 @@ export async function updateStatusPreco(id: string, status: StatusPreco) {
 }
 
 export async function aprovarPreco(id: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: preco, error: fetchError } = await supabase
     .from("precos")

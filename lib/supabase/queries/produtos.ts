@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Produto } from "@/lib/types";
 
 export async function getProdutos() {
@@ -26,7 +27,7 @@ export async function getProdutoById(id: string) {
 }
 
 export async function updatePrecoProduto(id: string, preco_atual: number) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("produtos")
     .update({ preco_atual })
@@ -42,7 +43,7 @@ export interface ProdutoUpdatePayload {
 }
 
 export async function updateProduto(id: string, payload: ProdutoUpdatePayload) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("produtos")
     .update(payload)
@@ -57,7 +58,7 @@ export interface LinhaPlanilha {
 }
 
 export async function upsertProdutosEmLote(linhas: LinhaPlanilha[]) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   await Promise.all(
     linhas.map(({ produto_id, preco_atual, estoque_atual }) =>
       supabase

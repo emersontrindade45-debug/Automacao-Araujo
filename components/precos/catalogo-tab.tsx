@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useEffect } from "react";
 import type { Produto } from "@/lib/types";
 import { editarProdutoAction } from "@/app/(crm)/precos/actions";
 import { Button } from "@/components/ui/button";
 import { ImportarModal } from "./importar-modal";
+import { createClient } from "@/lib/supabase/client";
 
 interface CatalogoTabProps {
   produtos: Produto[];
@@ -47,6 +48,25 @@ export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
   const [importarAberto, setImportarAberto] = useState(false);
   const [pending, startTransition] = useTransition();
   const [filtros, setFiltros] = useState<Filtros>(filtrosIniciais);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("produtos-realtime")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "produtos" },
+        (payload) => {
+          const novo = payload.new as Produto;
+          setProdutos((prev) =>
+            prev.map((p) => (p.id === novo.id ? { ...p, ...novo } : p))
+          );
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const unidades = useMemo(
     () => Array.from(new Set(produtos.map((p) => p.unidade))).sort(),

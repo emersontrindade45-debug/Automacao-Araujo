@@ -1,0 +1,504 @@
+{
+  "id": "mfGeeAOtaCaPQB84",
+  "name": "Fluxo 6 — Central de Comando",
+  "active": false,
+  "nodes": [
+    {
+      "id": "node-wh-comando",
+      "name": "Webhook Central Comando",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [240, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "central-comando",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "dfce1183-5364-48c6-8b89-5a684940e9ac"
+    },
+    {
+      "id": "node-normalizar-f6",
+      "name": "Normalizar Payload F6",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst data = body.data || body;\n\nconst remoteJid = data.key?.remoteJid || data.remoteJid || body.telefone || '';\nconst telefone = remoteJid.replace('@s.whatsapp.net', '').replace('@g.us', '');\n\nconst mensagem = data.message?.conversation\n  || data.message?.extendedTextMessage?.text\n  || body.mensagem\n  || '';\n\nconst tipoMidia = data.message?.audioMessage ? 'audioMessage'\n  : data.message?.conversation || data.message?.extendedTextMessage ? 'texto'\n  : body.tipo_midia || 'texto';\n\nconst urlMidia = data.message?.audioMessage?.url\n  || data.message?.audioMessage?.directPath\n  || body.url_midia\n  || '';\n\nreturn [{ json: { telefone, mensagem, tipoMidia, urlMidia } }];"
+      }
+    },
+    {
+      "id": "node-validar-dono",
+      "name": "Validar Dono",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [680, 300],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.mensagem }}",
+                    "rightValue": ".",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and",
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 }
+              },
+              "renameOutput": true,
+              "outputKey": "toggle_ia"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.telefone }}",
+                    "rightValue": "={{ $env.DONO_TELEFONE }}",
+                    "operator": { "type": "string", "operation": "equals" }
+                  },
+                  {
+                    "leftValue": "={{ $json.mensagem }}",
+                    "rightValue": "#admin",
+                    "operator": { "type": "string", "operation": "startsWith" }
+                  }
+                ],
+                "combinator": "and",
+                "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict", "version": 1 }
+              },
+              "renameOutput": true,
+              "outputKey": "admin_autorizado"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "none" }
+      }
+    },
+    {
+      "id": "node-buscar-estado-ia",
+      "name": "Buscar Estado IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [900, 160],
+      "parameters": {
+        "url": "=https://zziapgnenvugyvrgrhrs.supabase.co/rest/v1/config_loja?select=ia_ativa&limit=1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-toggle-ia",
+      "name": "Toggle IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 160],
+      "parameters": {
+        "jsCode": "const payload = $('Normalizar Payload F6').item.json;\nconst estadoAtual = $input.first().json;\nconst rows = Array.isArray(estadoAtual) ? estadoAtual : [estadoAtual];\nconst iaAtiva = rows[0]?.ia_ativa ?? true;\nconst novoEstado = !iaAtiva;\n\nreturn [{ json: { telefone: payload.telefone, ia_ativa: novoEstado, novoEstado } }];"
+      }
+    },
+    {
+      "id": "node-atualizar-toggle",
+      "name": "Atualizar Toggle Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1340, 160],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://zziapgnenvugyvrgrhrs.supabase.co/rest/v1/config_loja?id=eq.1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ia_ativa: $json.novoEstado }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-notif-toggle",
+      "name": "Notificar Toggle",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1560, 160],
+      "parameters": {
+        "method": "POST",
+        "url": "https://evo.evoapi.shop/message/sendText/araujohub",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.EVOLUTION_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $('Toggle IA').item.json.telefone, text: $('Toggle IA').item.json.novoEstado ? '▶️ IA reativada' : '⏸️ IA pausada' }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "W5hKI38937XQAbl4", "name": "Evolution API" }
+      }
+    },
+    {
+      "id": "node-switch-midia",
+      "name": "Switch Tipo Midia",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [900, 440],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  { "leftValue": "={{ $json.tipoMidia }}", "rightValue": "audioMessage", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and",
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 }
+              },
+              "renameOutput": true,
+              "outputKey": "audio"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  { "leftValue": "={{ $json.tipoMidia }}", "rightValue": "texto", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and",
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 }
+              },
+              "renameOutput": true,
+              "outputKey": "texto"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      }
+    },
+    {
+      "id": "node-download-audio",
+      "name": "Download Audio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1120, 340],
+      "parameters": {
+        "url": "={{ $json.urlMidia }}",
+        "responseFormat": "file",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-whisper",
+      "name": "Whisper Transcricao",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [1340, 340],
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": { "language": "pt" }
+      },
+      "credentials": {
+        "openAiApi": { "id": "52clkHx8T3QEMNnB", "name": "OpenAI Araujo" }
+      }
+    },
+    {
+      "id": "node-preparar-texto",
+      "name": "Preparar Texto Admin",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 440],
+      "parameters": {
+        "jsCode": "const fromAudio = $('Whisper Transcricao').item?.json?.text || '';\nconst fromText = $('Normalizar Payload F6').item.json.mensagem || '';\n\nconst textoCompleto = fromAudio || fromText;\nconst textoLimpo = textoCompleto.replace(/^#admin\\s*/i, '').trim();\n\nconst payload = $('Normalizar Payload F6').item.json;\n\nreturn [{ json: { ...payload, textoAdmin: textoLimpo } }];"
+      }
+    },
+    {
+      "id": "node-agente-classificar",
+      "name": "Agente Classificar Intencao",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [1780, 440],
+      "parameters": {
+        "modelId": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Você é um classificador de comandos de atualização de base de conhecimento de uma loja.\n\nAnalise o texto do dono e retorne SOMENTE JSON válido, sem markdown:\n{\n  \"categoria\": \"faq\" | \"produto\" | \"configuracao\",\n  \"acao\": \"atualizar\" | \"adicionar\" | \"remover\",\n  \"dados\": {\n    \"chave\": \"identificador único do item (pergunta para faq, nome para produto, chave para config)\",\n    \"valor\": \"novo valor ou descrição (null se for remover)\"\n  }\n}\n\nExemplos:\n- 'horário amanhã é até 17h' → {\"categoria\":\"faq\",\"acao\":\"atualizar\",\"dados\":{\"chave\":\"Qual o horário de funcionamento?\",\"valor\":\"Segunda a sábado das 7h às 19h, mas amanhã fecha às 17h.\"}}\n- 'adiciona alcatra a R$75 o kg' → {\"categoria\":\"produto\",\"acao\":\"adicionar\",\"dados\":{\"chave\":\"Alcatra\",\"valor\":\"75.00|kg|sim\"}}\n- 'remove frango do cardápio' → {\"categoria\":\"produto\",\"acao\":\"remover\",\"dados\":{\"chave\":\"Frango inteiro\",\"valor\":null}}\n- 'entregamos até 8km' → {\"categoria\":\"configuracao\",\"acao\":\"atualizar\",\"dados\":{\"chave\":\"area_entrega\",\"valor\":\"Raio de 8km do centro\"}}"
+            },
+            {
+              "content": "={{ $json.textoAdmin }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": { "id": "52clkHx8T3QEMNnB", "name": "OpenAI Araujo" }
+      }
+    },
+    {
+      "id": "node-parse-intencao",
+      "name": "Parse Intencao",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 440],
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.message?.content || $input.first().json.text || '{}';\nlet parsed;\ntry {\n  const clean = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  parsed = JSON.parse(clean);\n} catch(e) {\n  parsed = { categoria: 'faq', acao: 'atualizar', dados: { chave: 'erro', valor: 'Não foi possível interpretar o comando.' } };\n}\n\nconst payload = $('Preparar Texto Admin').item.json;\n\nreturn [{ json: { ...payload, ...parsed } }];"
+      }
+    },
+    {
+      "id": "node-switch-categoria",
+      "name": "Switch Categoria",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [2220, 440],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.categoria }}", "rightValue": "faq", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and",
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 }
+              },
+              "renameOutput": true,
+              "outputKey": "faq"
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.categoria }}", "rightValue": "produto", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and",
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 }
+              },
+              "renameOutput": true,
+              "outputKey": "produto"
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.categoria }}", "rightValue": "configuracao", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and",
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 }
+              },
+              "renameOutput": true,
+              "outputKey": "configuracao"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "none" }
+      }
+    },
+    {
+      "id": "node-sheets-faq",
+      "name": "Sheets Upsert FAQ",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2440, 280],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "={{ $env.SHEETS_ID }}", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "FAQ", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Pergunta": "={{ $json.dados.chave }}",
+            "Resposta": "={{ $json.dados.valor }}"
+          },
+          "matchingColumns": ["Pergunta"],
+          "schema": [
+            { "id": "Pergunta", "displayName": "Pergunta", "required": false, "defaultMatch": true, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Resposta", "displayName": "Resposta", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "SHEETS_CRED_ID", "name": "Google Sheets Araujo" }
+      }
+    },
+    {
+      "id": "node-sheets-produto",
+      "name": "Sheets Upsert Produto",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2440, 440],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "={{ $env.SHEETS_ID }}", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "Produtos", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nome": "={{ $json.dados.chave }}",
+            "Preco": "={{ $json.dados.valor?.split('|')[0] || '' }}",
+            "Unidade": "={{ $json.dados.valor?.split('|')[1] || 'kg' }}",
+            "Ativo": "={{ $json.acao === 'remover' ? 'nao' : ($json.dados.valor?.split('|')[2] || 'sim') }}"
+          },
+          "matchingColumns": ["Nome"],
+          "schema": [
+            { "id": "Nome", "displayName": "Nome", "required": false, "defaultMatch": true, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Preco", "displayName": "Preco", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Unidade", "displayName": "Unidade", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Ativo", "displayName": "Ativo", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "SHEETS_CRED_ID", "name": "Google Sheets Araujo" }
+      }
+    },
+    {
+      "id": "node-sheets-config",
+      "name": "Sheets Upsert Config",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2440, 600],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "={{ $env.SHEETS_ID }}", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "Config", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Chave": "={{ $json.dados.chave }}",
+            "Valor": "={{ $json.dados.valor }}"
+          },
+          "matchingColumns": ["Chave"],
+          "schema": [
+            { "id": "Chave", "displayName": "Chave", "required": false, "defaultMatch": true, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Valor", "displayName": "Valor", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "SHEETS_CRED_ID", "name": "Google Sheets Araujo" }
+      }
+    },
+    {
+      "id": "node-confirmar-dono",
+      "name": "Confirmar Dono WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2660, 440],
+      "parameters": {
+        "method": "POST",
+        "url": "https://evo.evoapi.shop/message/sendText/araujohub",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.EVOLUTION_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $('Parse Intencao').item.json.telefone, text: '✅ ' + ($('Parse Intencao').item.json.categoria || 'item').toUpperCase() + ' atualizado com sucesso!' }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "W5hKI38937XQAbl4", "name": "Evolution API" }
+      }
+    },
+    {
+      "id": "node-respond-f6",
+      "name": "Respond OK F6",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [2880, 440],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true }",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Central Comando": {
+      "main": [[{ "node": "Normalizar Payload F6", "type": "main", "index": 0 }]]
+    },
+    "Normalizar Payload F6": {
+      "main": [[{ "node": "Validar Dono", "type": "main", "index": 0 }]]
+    },
+    "Validar Dono": {
+      "main": [
+        [{ "node": "Buscar Estado IA", "type": "main", "index": 0 }],
+        [{ "node": "Switch Tipo Midia", "type": "main", "index": 0 }]
+      ]
+    },
+    "Buscar Estado IA": {
+      "main": [[{ "node": "Toggle IA", "type": "main", "index": 0 }]]
+    },
+    "Toggle IA": {
+      "main": [[{ "node": "Atualizar Toggle Supabase", "type": "main", "index": 0 }]]
+    },
+    "Atualizar Toggle Supabase": {
+      "main": [[{ "node": "Notificar Toggle", "type": "main", "index": 0 }]]
+    },
+    "Switch Tipo Midia": {
+      "main": [
+        [{ "node": "Download Audio", "type": "main", "index": 0 }],
+        [{ "node": "Preparar Texto Admin", "type": "main", "index": 0 }]
+      ]
+    },
+    "Download Audio": {
+      "main": [[{ "node": "Whisper Transcricao", "type": "main", "index": 0 }]]
+    },
+    "Whisper Transcricao": {
+      "main": [[{ "node": "Preparar Texto Admin", "type": "main", "index": 0 }]]
+    },
+    "Preparar Texto Admin": {
+      "main": [[{ "node": "Agente Classificar Intencao", "type": "main", "index": 0 }]]
+    },
+    "Agente Classificar Intencao": {
+      "main": [[{ "node": "Parse Intencao", "type": "main", "index": 0 }]]
+    },
+    "Parse Intencao": {
+      "main": [[{ "node": "Switch Categoria", "type": "main", "index": 0 }]]
+    },
+    "Switch Categoria": {
+      "main": [
+        [{ "node": "Sheets Upsert FAQ", "type": "main", "index": 0 }],
+        [{ "node": "Sheets Upsert Produto", "type": "main", "index": 0 }],
+        [{ "node": "Sheets Upsert Config", "type": "main", "index": 0 }]
+      ]
+    },
+    "Sheets Upsert FAQ": {
+      "main": [[{ "node": "Confirmar Dono WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Sheets Upsert Produto": {
+      "main": [[{ "node": "Confirmar Dono WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Sheets Upsert Config": {
+      "main": [[{ "node": "Confirmar Dono WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Confirmar Dono WhatsApp": {
+      "main": [[{ "node": "Respond OK F6", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all"
+  },
+  "staticData": null,
+  "tags": [],
+  "versionId": "803404a7-0a67-469a-a794-f6100a857cf7",
+  "createdAt": "2026-05-09T18:30:48.775Z",
+  "updatedAt": "2026-05-09T18:30:48.775Z"
+}

@@ -1,0 +1,3 @@
+-- Coluna já existente no banco de produção (int4).
+-- Mantida para rastreamento histórico — não executar novamente.
+-- ALTER TABLE produtos ADD COLUMN estoque_atual int4 NOT NULL DEFAULT 0;

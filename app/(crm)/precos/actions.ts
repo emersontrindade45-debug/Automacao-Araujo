@@ -15,6 +15,15 @@ export async function rejeitarPrecoAction(precoId: string) {
   revalidatePath("/precos");
 }
 
+export async function alterarStatusPrecoAction(precoId: string, status: import("@/lib/types").StatusPreco) {
+  if (status === "aprovado") {
+    await aprovarPreco(precoId);
+  } else {
+    await updateStatusPreco(precoId, status);
+  }
+  revalidatePath("/precos");
+}
+
 export async function editarProdutoAction(
   id: string,
   payload: { preco_atual: number; estoque_atual: number; ativo: boolean }

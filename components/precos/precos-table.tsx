@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import type { StatusPreco } from "@/lib/types";
 import type { AtualizacaoPreco } from "@/lib/supabase/queries/precos";
-import { aprovarPrecoAction, rejeitarPrecoAction } from "@/app/(crm)/precos/actions";
+import { alterarStatusPrecoAction } from "@/app/(crm)/precos/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -44,9 +44,7 @@ export function PrecosTable({ atualizacoes: inicial }: PrecosTableProps) {
 
   function mudarStatus(id: string, status: StatusPreco) {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, status } : i)));
-    startTransition(() =>
-      status === "aprovado" ? aprovarPrecoAction(id) : rejeitarPrecoAction(id)
-    );
+    startTransition(() => alterarStatusPrecoAction(id, status));
   }
 
   return (
@@ -91,7 +89,7 @@ export function PrecosTable({ atualizacoes: inicial }: PrecosTableProps) {
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wide">Novo preço</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wide">Status</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted uppercase tracking-wide hidden lg:table-cell">Data</th>
-              <th className="px-4 py-3 w-32 text-right text-xs font-semibold text-muted uppercase tracking-wide">Ações</th>
+              <th className="px-4 py-3 w-44 text-right text-xs font-semibold text-muted uppercase tracking-wide">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -128,16 +126,23 @@ export function PrecosTable({ atualizacoes: inicial }: PrecosTableProps) {
                   </td>
                   <td className="px-4 py-3 text-muted hidden lg:table-cell text-xs">{formatData(item.criado_em)}</td>
                   <td className="px-4 py-3 text-right">
-                    {item.status === "pendente" && (
-                      <div className="flex items-center justify-end gap-2">
-                        <Button size="sm" variant="secondary" disabled={pending} onClick={() => mudarStatus(item.id, "rejeitado")}>
-                          Rejeitar
-                        </Button>
-                        <Button size="sm" variant="primary" disabled={pending} onClick={() => mudarStatus(item.id, "aprovado")}>
-                          Aprovar
-                        </Button>
-                      </div>
-                    )}
+                    <select
+                      disabled={pending}
+                      value={item.status}
+                      onChange={(e) => mudarStatus(item.id, e.target.value as StatusPreco)}
+                      className={[
+                        "h-8 border rounded-md px-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand transition-colors",
+                        item.status === "pendente"
+                          ? "border-[var(--warning-border)] bg-warning-bg text-warning"
+                          : item.status === "aprovado"
+                          ? "border-[var(--success-border,theme(colors.green.200))] bg-[var(--success-bg,theme(colors.green.50))] text-success"
+                          : "border-[var(--danger-border,theme(colors.red.200))] bg-danger-bg text-danger",
+                      ].join(" ")}
+                    >
+                      <option value="pendente">Pendente</option>
+                      <option value="aprovado">Aprovado</option>
+                      <option value="rejeitado">Rejeitado</option>
+                    </select>
                   </td>
                 </tr>
               );

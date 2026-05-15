@@ -5,10 +5,11 @@ export const metadata = { title: "Configurações – Araujo Hub" };
 
 export default async function ConfiguracoesLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
+  // app_metadata is embedded in the JWT — getSession() exposes it without a network call
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const isAdmin = user?.app_metadata?.papel === "admin";
+    data: { session },
+  } = await supabase.auth.getSession();
+  const isAdmin = session?.user?.app_metadata?.papel === "admin";
 
   return (
     <div className="space-y-6">

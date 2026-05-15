@@ -1,15 +1,18 @@
 import { Shell } from "@/components/layout/shell";
+import { normalizePapel } from "@/lib/auth/papel";
 import { countPrecosPendentes } from "@/lib/supabase/queries/precos";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function CrmLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // app_metadata (papel) lives in the JWT — use getSession() to read it
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
 
   const precosPendentes = await countPrecosPendentes();
 
   const userName = user?.user_metadata?.nome ?? user?.email?.split("@")[0] ?? "Usuário";
-  const userPapel = (user?.app_metadata?.papel ?? "atendimento") as string;
+  const userPapel = normalizePapel(user?.app_metadata?.papel);
 
   return (
     <Shell userName={userName} userPapel={userPapel} precosPendentes={precosPendentes}>

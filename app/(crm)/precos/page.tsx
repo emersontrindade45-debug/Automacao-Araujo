@@ -7,8 +7,8 @@ export const metadata = { title: "Preços – Araujo Hub" };
 
 export default async function PrecosPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const isAdmin = user?.app_metadata?.papel === "admin";
+  const { data: { session } } = await supabase.auth.getSession();
+  const isAdmin = session?.user?.app_metadata?.papel === "admin";
 
   const [atualizacoes, pendentes, produtos] = await Promise.all([
     isAdmin ? getAtualizacoesPreco() : Promise.resolve([]),

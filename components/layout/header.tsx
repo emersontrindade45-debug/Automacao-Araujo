@@ -1,17 +1,15 @@
 import { Avatar } from "@/components/ui/avatar";
 import { logout } from "@/app/(public)/login/actions";
+import type { Papel } from "@/lib/types";
 
-const papelLabels: Record<string, string> = {
+const papelLabels: Record<Papel, string> = {
   admin: "Admin",
   atendimento: "Atendimento",
-  separacao: "Separação",
-  expedicao: "Expedição",
-  followup: "Follow-up",
 };
 
 interface HeaderProps {
   userName?: string;
-  userPapel?: string;
+  userPapel?: Papel;
 }
 
 export function Header({ userName = "Usuário", userPapel = "atendimento" }: HeaderProps) {
@@ -29,7 +27,7 @@ export function Header({ userName = "Usuário", userPapel = "atendimento" }: Hea
       <div className="flex items-center gap-3">
         <div className="hidden sm:flex flex-col items-end">
           <span className="text-sm font-medium text-foreground leading-tight">{userName}</span>
-          <span className="text-xs text-muted leading-tight">{papelLabels[userPapel] ?? userPapel}</span>
+          <span className="text-xs text-muted leading-tight">{papelLabels[userPapel]}</span>
         </div>
         <Avatar name={userName} size="sm" />
         <form action={logout}>

@@ -7,9 +7,8 @@ export const metadata = { title: "Follow-up automático – Araujo Hub" };
 
 export default async function FollowUpConfigPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
 
   if (user?.app_metadata?.papel !== "admin") {
     return (

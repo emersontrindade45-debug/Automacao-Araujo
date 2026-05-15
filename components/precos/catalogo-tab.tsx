@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 
 interface CatalogoTabProps {
   produtos: Produto[];
+  somenteLeitura?: boolean;
 }
 
 function formatMoeda(v: number) {
@@ -41,7 +42,7 @@ const filtrosIniciais: Filtros = {
   ativo: "",
 };
 
-export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
+export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: CatalogoTabProps) {
   const [produtos, setProdutos] = useState<Produto[]>(inicial);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<EditState | null>(null);
@@ -134,7 +135,7 @@ export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
     );
   }
 
-  const podeEditar = !pending;
+  const podeEditar = !pending && !somenteLeitura;
 
   const inputCls = "h-8 w-full border border-border rounded-md px-2 text-xs bg-surface text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand";
   const selectCls = "h-8 w-full border border-border rounded-md px-2 text-xs bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-brand";
@@ -226,9 +227,11 @@ export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
             </button>
           )}
         </div>
-        <Button variant="secondary" size="sm" onClick={() => setImportarAberto(true)}>
-          Importar planilha
-        </Button>
+        {!somenteLeitura && (
+          <Button variant="secondary" size="sm" onClick={() => setImportarAberto(true)}>
+            Importar planilha
+          </Button>
+        )}
       </div>
 
       {temFiltroAtivo && (
@@ -245,7 +248,7 @@ export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
             <col className="w-[17%]" />
             <col className="w-[17%]" />
             <col className="w-[12%] hidden md:table-column" />
-            <col className="w-[22%]" />
+            {!somenteLeitura && <col className="w-[22%]" />}
           </colgroup>
           <thead>
             <tr className="border-b border-border bg-surface-subtle">
@@ -254,7 +257,7 @@ export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
               <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide">Preço</th>
               <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide">Estoque</th>
               <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide hidden md:table-cell">Status</th>
-              <th className="px-3 py-2.5 text-right text-xs font-semibold text-muted uppercase tracking-wide">Ações</th>
+              {!somenteLeitura && <th className="px-3 py-2.5 text-right text-xs font-semibold text-muted uppercase tracking-wide">Ações</th>}
             </tr>
           </thead>
           <tbody>
@@ -336,35 +339,37 @@ export function CatalogoTab({ produtos: inicial }: CatalogoTabProps) {
                     )}
                   </td>
 
-                  <td className="px-3 py-2.5 text-right">
-                    {emEdicao ? (
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button size="sm" variant="ghost" onClick={cancelarEdicao}>
-                          Cancelar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="primary"
-                          disabled={precoInvalido || estoqueInvalido}
-                          onClick={() => salvarEdicao(produto.id)}
+                  {!somenteLeitura && (
+                    <td className="px-3 py-2.5 text-right">
+                      {emEdicao ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button size="sm" variant="ghost" onClick={cancelarEdicao}>
+                            Cancelar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            disabled={precoInvalido || estoqueInvalido}
+                            onClick={() => salvarEdicao(produto.id)}
+                          >
+                            Salvar
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          disabled={!podeEditar}
+                          onClick={() => iniciarEdicao(produto)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-surface text-foreground hover:bg-brand hover:text-white hover:border-brand transition-colors disabled:opacity-40"
                         >
-                          Salvar
-                        </Button>
-                      </div>
-                    ) : (
-                      <button
-                        disabled={!podeEditar}
-                        onClick={() => iniciarEdicao(produto)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-surface text-foreground hover:bg-brand hover:text-white hover:border-brand transition-colors disabled:opacity-40"
-                      >
-                        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                        </svg>
-                        Editar
-                      </button>
-                    )}
-                  </td>
+                          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
+                          Editar
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}

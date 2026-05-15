@@ -39,17 +39,29 @@ export async function updateSession(request: NextRequest) {
   const isPublicRoute =
     pathname === "/" ||
     pathname === "/login" ||
+    pathname === "/redefinir-senha" ||
     pathname.startsWith("/api/");
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     const redirectResponse = NextResponse.redirect(url);
-    // Preserva os cookies de sessão no redirect
     supabaseResponse.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie.name, cookie.value);
     });
     return redirectResponse;
+  }
+
+  // Rotas acessíveis apenas a admin
+  const isAdminRoute =
+    pathname.startsWith("/configuracoes") &&
+    pathname !== "/configuracoes/conta" &&
+    !pathname.startsWith("/configuracoes/conta");
+
+  if (user && isAdminRoute && user.app_metadata?.papel !== "admin") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/kanban";
+    return NextResponse.redirect(url);
   }
 
   return supabaseResponse;

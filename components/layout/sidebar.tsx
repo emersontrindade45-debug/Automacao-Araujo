@@ -2,20 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { Papel } from "@/lib/types";
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ReactNode;
   badge?: number;
+  somenteAdmin?: boolean;
 }
 
 interface SidebarProps {
   precosPendentes?: number;
+  papel?: Papel;
 }
 
-export function Sidebar({ precosPendentes = 0 }: SidebarProps) {
+export function Sidebar({ precosPendentes = 0, papel = "atendimento" }: SidebarProps) {
   const pathname = usePathname();
+  const isAdmin = papel === "admin";
 
   const navItems: NavItem[] = [
     {
@@ -66,6 +70,7 @@ export function Sidebar({ precosPendentes = 0 }: SidebarProps) {
     {
       href: "/configuracoes",
       label: "Configurações",
+      somenteAdmin: true,
       icon: (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
           <circle cx="12" cy="12" r="3" />
@@ -87,7 +92,7 @@ export function Sidebar({ precosPendentes = 0 }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex flex-col gap-1 p-3 flex-1 overflow-y-auto">
-        {navItems.map((item) => {
+        {navItems.filter((item) => !item.somenteAdmin || isAdmin).map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(item.href + "/");
           return (

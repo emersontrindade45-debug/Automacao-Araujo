@@ -1,4 +1,4 @@
-export type Papel = "admin" | "atendimento" | "separacao" | "expedicao" | "followup";
+export type Papel = "admin" | "atendimento";
 
 export type CanalOrigem = "whatsapp" | "instagram" | "landpage";
 

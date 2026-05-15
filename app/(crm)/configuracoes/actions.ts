@@ -27,6 +27,7 @@ export async function salvarConfigFollowUpAction(config: ConfigFollowUp) {
   if (error) throw error;
 
   revalidatePath("/configuracoes");
+  revalidatePath("/configuracoes/follow-up");
 }
 
 export async function getConfigFollowUp(): Promise<ConfigFollowUp> {

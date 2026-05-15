@@ -7,7 +7,6 @@ export async function getProdutos() {
   const { data, error } = await supabase
     .from("produtos")
     .select("*")
-    .eq("ativo", true)
     .order("nome");
 
   if (error) throw error;

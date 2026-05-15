@@ -127,6 +127,29 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">preco_atual</code>,{" "}
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">estoque_atual</code>.
               </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  const XLSX = await import("xlsx");
+                  const linhas = produtos.map((p) => ({
+                    nome: p.nome,
+                    preco_atual: p.preco_atual,
+                    estoque_atual: p.estoque_atual,
+                  }));
+                  const ws = XLSX.utils.json_to_sheet(linhas);
+                  const wb = XLSX.utils.book_new();
+                  XLSX.utils.book_append_sheet(wb, ws, "Produtos");
+                  XLSX.writeFile(wb, "modelo_catalogo.xlsx");
+                }}
+                className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-lg border border-border bg-surface-subtle text-foreground hover:bg-surface transition-colors"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Baixar modelo preenchido
+              </button>
               <input
                 ref={inputRef}
                 type="file"

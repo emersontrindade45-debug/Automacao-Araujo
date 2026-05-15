@@ -1,6 +1,0 @@
-{
-  "enabledMcpjsonServers": [
-    "supabase",
-    "n8n-mcp"
-  ]
-}

@@ -50,6 +50,11 @@ supabase/.temp/
 # MCP config (contém API keys)
 .mcp.json
 
+# Claude Code internals
+.claude/
+*export_temp*
+n8n-skills/
+
 # Temporary n8n workflow downloads
 n8n/workflows/fluxo*_current*.json
 n8n/workflows/fluxo*_fixed.json

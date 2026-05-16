@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useRef } from "react";
 import type { Produto } from "@/lib/types";
 import type { LinhaPlanilha } from "@/lib/supabase/queries/produtos";
 import { importarProdutosAction } from "@/app/(crm)/precos/actions";
@@ -15,7 +15,7 @@ interface ImportarModalProps {
 
 interface LinhaPrevia {
   nome: string;
-  produto_id: string | null;
+  unidade: string | null;
   preco_atual: number | null;
   estoque_atual: number | null;
   erro: string | null;
@@ -48,18 +48,18 @@ async function parseArquivo(file: File, produtosRef: Produto[]): Promise<LinhaPr
 
   return rows.map((row) => {
     const nome = String(row["nome"] ?? row["Nome"] ?? "").trim();
-    if (!nome) return { nome: "(vazio)", produto_id: null, preco_atual: null, estoque_atual: null, erro: "Nome obrigatório" };
+    if (!nome) return { nome: "(vazio)", unidade: null, preco_atual: null, estoque_atual: null, erro: "Nome obrigatório" };
 
-    const match = produtosRef.find((p) => p.nome.toLowerCase() === nome.toLowerCase());
-    if (!match) return { nome, produto_id: null, preco_atual: null, estoque_atual: null, erro: `Produto "${nome}" não encontrado no catálogo` };
+    const unidade = String(row["unidade"] ?? row["Unidade"] ?? "").trim() || null;
+    if (!unidade) return { nome, unidade: null, preco_atual: null, estoque_atual: null, erro: "Unidade obrigatória (ex: kg, unidade, pacote)" };
 
     const preco_atual = parseNumero(row["preco_atual"] ?? row["Preço Atual"] ?? row["preco"] ?? row["Preco"]);
     const estoque_atual = parseNumero(row["estoque_atual"] ?? row["Estoque Atual"] ?? row["estoque"] ?? row["Estoque"]);
 
-    if (preco_atual === null) return { nome, produto_id: match.id, preco_atual: null, estoque_atual: null, erro: "preco_atual inválido (deve ser número >= 0)" };
-    if (estoque_atual === null) return { nome, produto_id: match.id, preco_atual, estoque_atual: null, erro: "estoque_atual inválido (deve ser número >= 0)" };
+    if (preco_atual === null) return { nome, unidade, preco_atual: null, estoque_atual: null, erro: "preco_atual inválido (deve ser número >= 0)" };
+    if (estoque_atual === null) return { nome, unidade, preco_atual, estoque_atual: null, erro: "estoque_atual inválido (deve ser número >= 0)" };
 
-    return { nome, produto_id: match.id, preco_atual, estoque_atual, erro: null };
+    return { nome, unidade, preco_atual, estoque_atual, erro: null };
   });
 }
 
@@ -70,7 +70,8 @@ function formatMoeda(v: number) {
 export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: ImportarModalProps) {
   const [previa, setPrevia] = useState<LinhaPrevia[] | null>(null);
   const [carregando, setCarregando] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
+  const [erroImport, setErroImport] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   if (!aberto) return null;
@@ -86,24 +87,32 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
 
   function fechar() {
     setPrevia(null);
+    setErroImport(null);
     if (inputRef.current) inputRef.current.value = "";
     onFechar();
   }
 
-  const validas = previa?.filter((l) => l.erro === null && l.produto_id !== null) ?? [];
+  const validas = previa?.filter((l) => l.erro === null && l.unidade !== null) ?? [];
   const comErro = previa?.filter((l) => l.erro !== null) ?? [];
 
-  function confirmar() {
+  async function confirmar() {
     const linhas: LinhaPlanilha[] = validas.map((l) => ({
-      produto_id: l.produto_id!,
+      nome: l.nome,
+      unidade: l.unidade!,
       preco_atual: l.preco_atual!,
       estoque_atual: l.estoque_atual!,
     }));
-    startTransition(async () => {
+    setPending(true);
+    setErroImport(null);
+    try {
       await importarProdutosAction(linhas);
       onConcluido(linhas);
       fechar();
-    });
+    } catch (e) {
+      setErroImport(e instanceof Error ? e.message : "Erro desconhecido ao importar");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -124,8 +133,10 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
               <p className="text-sm text-muted">
                 Selecione um arquivo <strong>.csv</strong> ou <strong>.xlsx</strong> com as colunas:
                 <code className="ml-1 px-1.5 py-0.5 bg-surface-subtle rounded text-xs">nome</code>,{" "}
+                <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">unidade</code>,{" "}
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">preco_atual</code>,{" "}
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">estoque_atual</code>.
+                {" "}Produtos novos serão criados; existentes serão atualizados.
               </p>
               <button
                 type="button"
@@ -133,6 +144,7 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
                   const XLSX = await import("xlsx");
                   const linhas = produtos.map((p) => ({
                     nome: p.nome,
+                    unidade: p.unidade,
                     preco_atual: p.preco_atual,
                     estoque_atual: p.estoque_atual,
                   }));
@@ -176,16 +188,18 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
                     <thead>
                       <tr className="border-b border-border bg-surface-subtle">
                         <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Produto</th>
-                        <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Novo Preço</th>
-                        <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Novo Estoque</th>
+                        <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Unidade</th>
+                        <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Preço</th>
+                        <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Estoque</th>
                       </tr>
                     </thead>
                     <tbody>
                       {validas.map((l, i) => (
                         <tr key={i} className="border-b border-border last:border-0">
                           <td className="px-3 py-2 font-medium text-foreground">{l.nome}</td>
+                          <td className="px-3 py-2 text-muted">{l.unidade}</td>
                           <td className="px-3 py-2 text-foreground">{formatMoeda(l.preco_atual!)}</td>
-<td className="px-3 py-2 text-foreground">{l.estoque_atual}</td>
+                          <td className="px-3 py-2 text-foreground">{l.estoque_atual}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -214,6 +228,11 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
           )}
         </div>
 
+        {erroImport && (
+          <div className="px-5 py-2 border-t border-border bg-danger-bg">
+            <p className="text-xs text-danger">{erroImport}</p>
+          </div>
+        )}
         <div className="px-5 py-4 border-t border-border flex items-center justify-end gap-3">
           <Button variant="ghost" size="sm" onClick={fechar}>
             Cancelar

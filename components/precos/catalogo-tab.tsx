@@ -44,6 +44,10 @@ const filtrosIniciais: Filtros = {
 
 export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: CatalogoTabProps) {
   const [produtos, setProdutos] = useState<Produto[]>(inicial);
+
+  useEffect(() => {
+    setProdutos(inicial);
+  }, [inicial]);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<EditState | null>(null);
   const [importarAberto, setImportarAberto] = useState(false);
@@ -126,10 +130,10 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
     startTransition(() => editarProdutoAction(id, payload));
   }
 
-  function onImportarConcluido(atualizados: { produto_id: string; preco_atual: number; estoque_atual: number }[]) {
+  function onImportarConcluido(atualizados: import("@/lib/supabase/queries/produtos").LinhaPlanilha[]) {
     setProdutos((prev) =>
       prev.map((p) => {
-        const atualizado = atualizados.find((a) => a.produto_id === p.id);
+        const atualizado = atualizados.find((a) => a.nome.toLowerCase() === p.nome.toLowerCase());
         return atualizado ? { ...p, preco_atual: atualizado.preco_atual, estoque_atual: atualizado.estoque_atual } : p;
       })
     );

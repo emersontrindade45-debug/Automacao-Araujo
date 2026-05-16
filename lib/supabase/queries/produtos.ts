@@ -51,7 +51,8 @@ export async function updateProduto(id: string, payload: ProdutoUpdatePayload) {
 }
 
 export interface LinhaPlanilha {
-  produto_id: string;
+  nome: string;
+  unidade: string;
   preco_atual: number;
   estoque_atual: number;
 }
@@ -59,11 +60,13 @@ export interface LinhaPlanilha {
 export async function upsertProdutosEmLote(linhas: LinhaPlanilha[]) {
   const supabase = createAdminClient();
   await Promise.all(
-    linhas.map(({ produto_id, preco_atual, estoque_atual }) =>
+    linhas.map(({ nome, unidade, preco_atual, estoque_atual }) =>
       supabase
         .from("produtos")
-        .update({ preco_atual, estoque_atual })
-        .eq("id", produto_id)
+        .upsert(
+          { nome, unidade, preco_atual, estoque_atual, ativo: true },
+          { onConflict: "nome", ignoreDuplicates: false }
+        )
         .throwOnError()
     )
   );

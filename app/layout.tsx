@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import "./globals.css";
 
 const geist = Geist({
@@ -23,8 +24,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${geist.variable} h-full antialiased`}>
-      <body className="min-h-full bg-surface text-foreground">{children}</body>
+    <html lang="pt-BR" className={`${geist.variable} h-full antialiased`} suppressHydrationWarning>
+      <body className="min-h-full bg-surface text-foreground">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

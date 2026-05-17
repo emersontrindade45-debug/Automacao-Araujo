@@ -1,4 +1,5 @@
 import { Avatar } from "@/components/ui/avatar";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { logout } from "@/app/(public)/login/actions";
 import type { Papel } from "@/lib/types";
 
@@ -30,6 +31,7 @@ export function Header({ userName = "Usuário", userPapel = "atendimento" }: Hea
           <span className="text-xs text-muted leading-tight">{papelLabels[userPapel]}</span>
         </div>
         <Avatar name={userName} size="sm" />
+        <ThemeToggle />
         <form action={logout}>
           <button
             type="submit"

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Papel } from "@/lib/types";
@@ -83,11 +84,8 @@ export function Sidebar({ precosPendentes = 0, papel = "atendimento" }: SidebarP
   return (
     <aside className="hidden md:flex flex-col w-56 shrink-0 h-screen sticky top-0 bg-surface border-r border-border">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 h-14 px-5 border-b border-border shrink-0">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white font-bold text-sm">
-          A
-        </span>
-        <span className="font-semibold text-foreground text-sm">Araujo Hub</span>
+      <div className="flex items-center h-14 px-5 border-b border-border shrink-0">
+        <Image src="/logo-araujo.png" alt="Araujo" height={34} width={120} className="object-contain" priority />
       </div>
 
       {/* Nav */}

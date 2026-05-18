@@ -3,6 +3,7 @@ import type { Pedido } from "@/lib/types";
 export const mockPedidos: Pedido[] = [
   {
     id: "ped1",
+    numero_pedido: 1,
     cliente_id: "c4",
     itens: [
       { produto_id: "p2", nome: "Frango Inteiro (kg)", quantidade: 2, preco_unitario: 18.5 },
@@ -18,6 +19,7 @@ export const mockPedidos: Pedido[] = [
   },
   {
     id: "ped2",
+    numero_pedido: 2,
     cliente_id: "c5",
     itens: [
       { produto_id: "p5", nome: "Pão Francês (un)", quantidade: 10, preco_unitario: 0.75 },
@@ -33,6 +35,7 @@ export const mockPedidos: Pedido[] = [
   },
   {
     id: "ped3",
+    numero_pedido: 3,
     cliente_id: "c6",
     itens: [
       { produto_id: "p1", nome: "Alcatra (kg)", quantidade: 1.5, preco_unitario: 52.9 },
@@ -49,6 +52,7 @@ export const mockPedidos: Pedido[] = [
   },
   {
     id: "ped4",
+    numero_pedido: 4,
     cliente_id: "c7",
     itens: [
       { produto_id: "p6", nome: "Pão de Forma (pacote)", quantidade: 2, preco_unitario: 9.5 },
@@ -64,6 +68,7 @@ export const mockPedidos: Pedido[] = [
   },
   {
     id: "ped5",
+    numero_pedido: 5,
     cliente_id: "c3",
     itens: [
       { produto_id: "p5", nome: "Pão Francês (un)", quantidade: 20, preco_unitario: 0.75 },

@@ -18,6 +18,10 @@ function formatData(iso: string) {
   });
 }
 
+function formatNumeroPedido(numero: number) {
+  return `#${String(numero).padStart(6, "0")}`;
+}
+
 const pagamentoIcon: Record<string, string> = {
   Pix: "⚡",
   "Cartão de Débito": "💳",
@@ -32,8 +36,11 @@ export function PedidoCard({ pedido, clienteNome }: PedidoCardProps) {
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
+            <p className="text-xs font-semibold text-brand">
+              Pedido {formatNumeroPedido(pedido.numero_pedido)}
+            </p>
             {clienteNome && (
-              <p className="font-semibold text-foreground text-sm truncate">{clienteNome}</p>
+              <p className="font-semibold text-foreground text-sm truncate mt-0.5">{clienteNome}</p>
             )}
             <p className="text-xs text-muted mt-0.5">{formatData(pedido.criado_em)}</p>
           </div>

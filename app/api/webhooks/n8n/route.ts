@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
 
   const { tipo, handoff, atendente_email } = body;
   const supabase = createAdminClient();
+  let pedidoCriado: { id: string; numero_pedido: number } | null = null;
 
   // Upsert cliente
   const { data: cliente, error: upsertError } = await supabase
@@ -59,17 +60,23 @@ export async function POST(request: NextRequest) {
       0
     );
 
-    const { error: pedidoError } = await supabase.from("pedidos").insert({
-      cliente_id: cliente.id,
-      itens: handoff.itens_pedido,
-      status: "pedido_gerado",
-      endereco_entrega: "",
-      forma_pagamento: "",
-      total,
-    });
+    const { data: pedido, error: pedidoError } = await supabase
+      .from("pedidos")
+      .insert({
+        cliente_id: cliente.id,
+        itens: handoff.itens_pedido,
+        status: "pedido_gerado",
+        endereco_entrega: "",
+        forma_pagamento: "",
+        total,
+      })
+      .select("id, numero_pedido")
+      .single();
 
     if (pedidoError) {
       console.error("[webhook/n8n] criar pedido:", pedidoError);
+    } else {
+      pedidoCriado = pedido;
     }
   }
 
@@ -88,7 +95,12 @@ export async function POST(request: NextRequest) {
     await enviarNotificacao({ tipo, handoff, atendente_email });
   }
 
-  return NextResponse.json({ ok: true, cliente_id: cliente.id });
+  return NextResponse.json({
+    ok: true,
+    cliente_id: cliente.id,
+    pedido_id: pedidoCriado?.id ?? null,
+    numero_pedido: pedidoCriado?.numero_pedido ?? null,
+  });
 }
 
 function resolverEtapa(tipo: HandoffTipo) {

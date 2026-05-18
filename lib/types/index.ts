@@ -44,6 +44,7 @@ export interface ItemPedido {
 
 export interface Pedido {
   id: string;
+  numero_pedido: number;
   cliente_id: string;
   itens: ItemPedido[];
   status: Etapa;

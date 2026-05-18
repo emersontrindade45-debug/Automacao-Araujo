@@ -15,6 +15,10 @@ function formatMoeda(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function formatNumeroPedido(numero: number) {
+  return `#${String(numero).padStart(6, "0")}`;
+}
+
 const PROXIMA_ETAPA: Partial<Record<Etapa, Etapa>> = {
   fechamento: "pedido_gerado",
   pedido_gerado: "separacao",
@@ -51,6 +55,12 @@ export function PedidoDetalhe({ pedido, clienteNome }: PedidoDetalheProps) {
       <Card>
         <CardContent className="pt-5">
           <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <p className="text-xs text-subtle uppercase tracking-wide mb-1">Número do pedido</p>
+              <p className="text-sm font-semibold text-brand">
+                {formatNumeroPedido(pedido.numero_pedido)}
+              </p>
+            </div>
             <div>
               <p className="text-xs text-subtle uppercase tracking-wide mb-1">Status</p>
               <EtapaBadge etapa={status} />

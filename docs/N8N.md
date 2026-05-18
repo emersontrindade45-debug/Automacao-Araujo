@@ -171,6 +171,18 @@ Recebe handoffs processados pelo N8n.
 | `separacao_completa` | `em_rota` | — |
 | `sem_resposta` | `follow_up` | — |
 
+**Resposta para `pedido_confirmado`:** quando o pedido é criado, o Hub retorna `pedido_id` e
+`numero_pedido` para o N8n usar na confirmação ao cliente.
+
+```json
+{
+  "ok": true,
+  "cliente_id": "uuid",
+  "pedido_id": "uuid",
+  "numero_pedido": 1
+}
+```
+
 **Notificação por e-mail:** disparada via Resend para `atendente_email` quando `tipo` é `pedido_confirmado` ou `sem_resposta`.
 
 **Teste com curl:**

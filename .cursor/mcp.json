@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "n8n": {
+      "type": "stdio",
+      "command": "pnpm",
+      "args": ["dlx", "@leonardsellem/n8n-mcp-server"],
+      "env": {
+        "N8N_API_URL": "${env:N8N_API_URL}",
+        "N8N_API_KEY": "${env:N8N_API_KEY}"
+      }
+    }
+  }
+}

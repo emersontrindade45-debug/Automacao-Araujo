@@ -9,7 +9,31 @@ export async function getClientes() {
     .order("atualizado_em", { ascending: false });
 
   if (error) throw error;
-  return data as Cliente[];
+  const clientes = data as Cliente[];
+
+  // Busca o endereço do pedido mais recente por cliente
+  const ids = clientes.map((c) => c.id);
+  if (ids.length === 0) return clientes;
+
+  const { data: pedidos } = await supabase
+    .from("pedidos")
+    .select("cliente_id, endereco_entrega, criado_em")
+    .in("cliente_id", ids)
+    .not("endereco_entrega", "is", null)
+    .neq("endereco_entrega", "")
+    .order("criado_em", { ascending: false });
+
+  const enderecoMap = new Map<string, string>();
+  for (const p of pedidos ?? []) {
+    if (!enderecoMap.has(p.cliente_id) && p.endereco_entrega) {
+      enderecoMap.set(p.cliente_id, p.endereco_entrega);
+    }
+  }
+
+  return clientes.map((c) => ({
+    ...c,
+    endereco_entrega: enderecoMap.get(c.id) ?? null,
+  }));
 }
 
 export async function getClienteById(id: string) {

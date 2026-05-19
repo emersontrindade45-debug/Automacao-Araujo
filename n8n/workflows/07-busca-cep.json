@@ -1,0 +1,105 @@
+{
+  "name": "Subfluxo — Busca CEP por Endereço",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "trigger-cep",
+      "name": "Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\n\nconst cep = (input.cep || '').trim().replace(/\\D/g, '');\n\n// Modo 1: busca por CEP direto\nif (cep.length === 8) {\n  let data;\n  try {\n    data = await $helpers.httpRequest({\n      method: 'GET',\n      url: `https://viacep.com.br/ws/${cep}/json/`,\n      json: true\n    });\n  } catch (e) {\n    return [{ json: { erro: 'Falha ao consultar o serviço de CEP. Tente novamente.' } }];\n  }\n  if (data.erro) {\n    return [{ json: { erro: 'CEP não encontrado. Verifique o número informado.' } }];\n  }\n  return [{ json: data }];\n}\n\n// Modo 2: busca por endereço (UF + cidade + logradouro)\nconst uf = (input.uf || '').trim().toUpperCase().slice(0, 2);\n\nconst cidade = (input.cidade || '')\n  .trim()\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '')\n  .replace(/[^a-zA-Z0-9 ]/g, '')\n  .trim();\n\nconst logradouro = (input.logradouro || '')\n  .trim()\n  .replace(/^(rua|av|avenida|alameda|travessa|estrada|rodovia|r\\.|al\\.)\\s+/i, '')\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '')\n  .replace(/[^a-zA-Z0-9 ]/g, '')\n  .trim();\n\nif (!uf || !cidade || !logradouro) {\n  return [{ json: { erro: 'Informe um CEP de 8 dígitos OU os três campos: estado (UF), cidade e nome da rua.' } }];\n}\n\nlet data;\ntry {\n  data = await $helpers.httpRequest({\n    method: 'GET',\n    url: `https://viacep.com.br/ws/${uf}/${encodeURIComponent(cidade)}/${encodeURIComponent(logradouro)}/json/`,\n    json: true\n  });\n} catch (e) {\n  return [{ json: { erro: 'Falha ao consultar o serviço de endereço. Tente novamente.' } }];\n}\n\nif (data.erro) {\n  return [{ json: { erro: 'Endereço não encontrado. Peça ao cliente mais detalhes.' } }];\n}\n\nif (Array.isArray(data)) {\n  return data.map(d => ({ json: d }));\n}\n\nreturn [{ json: data }];"
+      },
+      "id": "code-cep",
+      "name": "Normalizar e Consultar CEP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "out-cep",
+              "name": "cep",
+              "value": "={{ $json.cep ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "out-logradouro",
+              "name": "logradouro",
+              "value": "={{ $json.logradouro ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "out-bairro",
+              "name": "bairro",
+              "value": "={{ $json.bairro ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "out-cidade",
+              "name": "cidade",
+              "value": "={{ $json.localidade ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "out-uf",
+              "name": "uf",
+              "value": "={{ $json.uf ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "out-endereco-completo",
+              "name": "endereco_completo",
+              "value": "={{ $json.logradouro ? $json.logradouro + ', ' + $json.bairro + ', ' + $json.localidade + '-' + $json.uf : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "out-erro",
+              "name": "erro",
+              "value": "={{ $json.erro ?? '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-output-cep",
+      "name": "Formatar Resposta",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [720, 0]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger": {
+      "main": [
+        [{ "node": "Normalizar e Consultar CEP", "type": "main", "index": 0 }]
+      ]
+    },
+    "Normalizar e Consultar CEP": {
+      "main": [
+        [{ "node": "Formatar Resposta", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "e4f789f3-b1d1-43ec-9dbe-4ecee3e4b7d4",
+  "meta": {
+    "instanceId": "dbc381b341b27c8eb54462163acf41a1eabfb2a77579172f7e0e72e41d42e0b3"
+  },
+  "id": "WsM0FUSQ173WUX7X",
+  "tags": []
+}

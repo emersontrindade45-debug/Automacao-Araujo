@@ -52,6 +52,7 @@ supabase/.temp/
 
 # Claude Code internals
 .claude/
+.superpowers/
 *export_temp*
 n8n-skills/
 

@@ -98,7 +98,7 @@ export async function notificarEtapaPedido(
 
     if (!pedido) return;
 
-    const cliente = pedido.clientes as { nome: string; telefone: string } | null;
+    const cliente = pedido.clientes as unknown as { nome: string; telefone: string } | null;
     if (!cliente) return;
 
     await _enviarNotificacoes(

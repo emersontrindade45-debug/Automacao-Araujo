@@ -23,6 +23,7 @@ export interface Cliente {
   etapa_atual: Etapa;
   criado_em: string;
   atualizado_em: string;
+  endereco_entrega?: string | null;
 }
 
 export interface Produto {

@@ -64,6 +64,25 @@ export function PedidoCard({ pedido, clienteNome }: PedidoCardProps) {
           )}
         </ul>
 
+        {/* Endereço */}
+        {pedido.endereco_entrega && (
+          <div className="flex items-start gap-1.5 mt-3 text-xs text-muted">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              className="w-3.5 h-3.5 shrink-0 mt-px text-subtle"
+            >
+              <path
+                fillRule="evenodd"
+                d="M8 1a5 5 0 0 0-5 5c0 3.188 2.718 6.274 4.472 8.096a.75.75 0 0 0 1.056 0C10.282 12.274 13 9.188 13 6a5 5 0 0 0-5-5Zm0 6.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <span className="line-clamp-2 leading-snug">{pedido.endereco_entrega}</span>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
           <div className="flex items-center gap-1.5 text-sm text-muted">

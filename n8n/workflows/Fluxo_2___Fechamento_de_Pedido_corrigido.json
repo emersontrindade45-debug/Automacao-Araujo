@@ -1,0 +1,903 @@
+{
+  "name": "Fluxo 2 - Fechamento_pedido",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fechamento-pedido",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-02",
+      "name": "Webhook Pedido",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -992,
+        304
+      ],
+      "webhookId": "f4f14a5f-0e38-40b4-9a9a-73a3e0aa3623"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "654c8148-77e5-42a6-a657-858526af8c82",
+              "name": "mensagem",
+              "value": "={{ $json.body.mensagem }}",
+              "type": "string"
+            },
+            {
+              "id": "ab960009-ad14-4333-afaf-cb42f811af40",
+              "name": "telefone",
+              "value": "={{ $json.body.telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "5ae1704e-3b92-42a1-85b6-e91fc9302865",
+              "name": "nome_cliente",
+              "value": "={{ $json.body.nome_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "245d81da-a407-4aa9-a8c7-8b8d2022fe37",
+              "name": "intencao",
+              "value": "={{ $json.body.intencao }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-normalizar-02",
+      "name": "Normalizar Dados Pedido",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -800,
+        304
+      ],
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Você é um assistente especializado em fechamento de pedidos.\n\nAnalise a mensagem atual e o histórico de conversa. Sua missão é coletar todas as informações necessárias para fechar o pedido:\n1. Produto(s) com quantidade e unidade\n2. Endereço de entrega completo\n3. Forma de pagamento (Pix, dinheiro ou cartão)\n\nUse as tools disponíveis para consultar produtos e categorias quando necessário.\n\n{{ $json.contexto }}\n\nRetorne SOMENTE um JSON válido com os campos:\n- produtos_solicitados: [{produto_id, nome, quantidade, unidade, preco_unitario}]\n- endereco_entrega: string (endereço completo ou vazio)\n- forma_pagamento: string (Pix, dinheiro, cartão ou vazio)\n- observacoes: string\n- pedido_completo: boolean (true SOMENTE se tiver produto(s), endereço E forma de pagamento)\n- resposta: string (mensagem amigável ao cliente solicitando o que ainda falta)\n",
+        "options": {
+          "maxIterations": 5,
+          "systemMessage": "Você é um assistente de fechamento de pedidos. Use o histórico da conversa para entender o contexto acumulado (itens já solicitados, endereço, forma de pagamento informados anteriormente) e continue de onde a conversa parou. Nunca repita perguntas sobre informações já fornecidas. Retorne sempre JSON válido."
+        }
+      },
+      "id": "node-agent-02",
+      "name": "Agente IA Pedido",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        768,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4.1-mini",
+        "options": {
+          "responseFormat": "json_object",
+          "temperature": 0.2
+        }
+      },
+      "id": "node-openai-model-02",
+      "name": "OpenAI Chat Model Pedido",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        528
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "w8nIui9qhEXhVDh4",
+          "name": "OpenAI 1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.output || \"\";\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(output);\n} catch (e) {\n  const match = output.match(/\\{[\\s\\S]*\\}/);\n  if (match) {\n    try {\n      parsed = JSON.parse(match[0]);\n    } catch (e2) {\n      parsed = {};\n    }\n  } else {\n    parsed = {};\n  }\n}\n\nconst ctx = $(\"Montar Contexto\").item.json || {};\nconst inputOriginal = $(\"Normalizar Dados Pedido\").item.json || {};\n\nfunction numero(valor) {\n  if (typeof valor === \"number\") return valor;\n\n  const limpo = String(valor || \"\")\n    .replace(/[^\\d,.-]/g, \"\")\n    .replace(\",\", \".\");\n\n  return Number(limpo) || 0;\n}\n\nconst produtosSolicitados =\n  parsed.produtos_solicitados ||\n  parsed.itens_pedido ||\n  parsed.itens ||\n  [];\n\nconst itensPedido = Array.isArray(produtosSolicitados)\n  ? produtosSolicitados.map((item) => ({\n      produto_id: item.produto_id || item.id || \"\",\n      nome: item.nome || item.produto || item.Produto || \"\",\n      quantidade: numero(item.quantidade || item.Quantidade || 0),\n      unidade: item.unidade || item.Unidade || \"\",\n      preco_unitario: numero(item.preco_unitario || item.preco || item.Preco || 0),\n      estoque: numero(item.estoque || item.Estoque || 0),\n    })).filter((item) => item.nome)\n  : [];\n\nconst resumoItens = itensPedido.length\n  ? itensPedido.map((item) =>\n      `- ${item.quantidade} ${item.unidade || \"\"} de ${item.nome}`\n    ).join(\"\\n\")\n  : \"\";\n\nconst endereco =\n  parsed.endereco_entrega ||\n  parsed.endereco ||\n  parsed.Endereco ||\n  \"\";\n\nconst formaPagamento =\n  parsed.forma_pagamento ||\n  parsed.pagamento ||\n  parsed.FormaPagamento ||\n  \"\";\n\nconst observacoes =\n  parsed.observacoes ||\n  parsed.Observacoes ||\n  \"\";\n\nconst pedidoCompleto = Boolean(\n  parsed.pedido_completo === true ||\n  parsed.pedido_completo === \"true\" ||\n  (\n    itensPedido.length > 0 &&\n    endereco &&\n    formaPagamento\n  )\n);\n\nconst resposta =\n  parsed.resposta ||\n  (\n    pedidoCompleto\n      ? `Pedido confirmado com os seguintes itens:\\n${resumoItens}`\n      : `Perfeito, ${inputOriginal.nome_cliente || parsed.cliente || \"cliente\"}! Anotei:\\n${resumoItens || \"os itens do seu pedido\"}\\n\\nPara finalizar seu pedido, me informe por favor:\\n1. Endereço de entrega\\n2. Forma de pagamento: Pix, dinheiro ou cartão`\n  );\n\nreturn [{\n  json: {\n    resposta,\n    pedido_completo: pedidoCompleto,\n    dados_coletados: JSON.stringify({\n      cliente: parsed.cliente || parsed.Cliente || inputOriginal.nome_cliente || \"\",\n      itens_pedido: itensPedido,\n      endereco_entrega: endereco,\n      forma_pagamento: formaPagamento,\n      observacoes,\n      mensagem: parsed.mensagem || parsed.Mensagem || inputOriginal.mensagem || \"\"\n    }),\n    cliente: parsed.cliente || parsed.Cliente || inputOriginal.nome_cliente || \"\",\n    itens_pedido: itensPedido,\n    produto: itensPedido[0]?.nome || \"\",\n    quantidade: itensPedido[0]?.quantidade || 0,\n    unidade: itensPedido[0]?.unidade || \"\",\n    preco: itensPedido[0]?.preco_unitario || 0,\n    estoque: itensPedido[0]?.estoque || 0,\n    endereco_entrega: endereco,\n    forma_pagamento: formaPagamento,\n    observacoes,\n    mensagem: parsed.mensagem || parsed.Mensagem || inputOriginal.mensagem || \"\",\n    telefone: inputOriginal.telefone || ctx.telefone || \"\",\n    nome_cliente: inputOriginal.nome_cliente || ctx.nome_cliente || parsed.cliente || \"\",\n    canal: inputOriginal.canal || ctx.canal || \"whatsapp\"\n  }\n}];"
+      },
+      "id": "node-parse-pedido-02",
+      "name": "Parse Pedido IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.pedido_completo }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              },
+              "id": "e85186d9-72ba-4dc2-8dc7-7a0f45a59c26"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-if-completo-02",
+      "name": "Pedido Completo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://araujo-hub.vercel.app/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-secret",
+              "value": "=araujo-n8n-secret-k9x2mQ7vR4"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    \"tipo\": \"pedido_confirmado\",\n    \"handoff\": {\n      \"nome\": $(\"Normalizar Dados Pedido\").item.json.nome_cliente || $json.cliente || \"Cliente\",\n      \"telefone\": $(\"Normalizar Dados Pedido\").item.json.telefone,\n      \"canal_origem\": \"whatsapp\",\n      \"etapa\": \"pedido_gerado\",\n      \"ultimas_mensagens\": [\n        $(\"Normalizar Dados Pedido\").item.json.mensagem,\n        $json.resposta || $json.mensagem || \"\"\n      ],\n      \"itens_pedido\": [\n        {\n          \"produto_id\": (Array.isArray($json.itens_pedido) && $json.itens_pedido.length > 0 ? $json.itens_pedido[0].produto_id : null) || \"00000000-0000-0000-0000-000000000000\",\n          \"nome\": $json.produto,\n          \"quantidade\": Number($json.quantidade || 1),\n          \"preco_unitario\": Number($json.preco || 0)\n        }\n      ],\n      \"proxima_acao\": \"Preparar pedido para separação\"\n    }\n  }\n}}",
+        "options": {}
+      },
+      "id": "node-confirmar-hub-02",
+      "name": "Confirmar Pedido no Hub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1856,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://evo.evoapi.shop/send/text/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "221ad739-d54f-4024-b870-d40055904167"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    \"number\": $(\"Normalizar Dados Pedido\").item.json.telefone,\n    \"text\": \"Pedido confirmado! ✅\\n\\n\" +\n      \"Número do pedido: #\" +\n      (\n  $(\"Confirmar Pedido no Hub\").item.json.numero_pedido\n    ? \"#\" + String($(\"Confirmar Pedido no Hub\").item.json.numero_pedido).padStart(6, \"0\")\n    : \"em processamento\"\n) +\n      \"\\n\\nProduto: \" + $(\"Parse Pedido IA\").item.json.produto +\n      \"\\nQuantidade: \" + $(\"Parse Pedido IA\").item.json.quantidade + \" \" + ($(\"Parse Pedido IA\").item.json.unidade || \"\") +\n      \"\\nValor unitário: R$ \" + Number($(\"Parse Pedido IA\").item.json.preco || 0).toFixed(2).replace(\".\", \",\") +\n      \"\\n\\nSeu pedido foi enviado para separação. Em breve nossa equipe dará continuidade ao atendimento.\"\n  }\n}}",
+        "options": {}
+      },
+      "id": "node-confirmar-wpp-02",
+      "name": "Confirmar Pedido WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2080,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://evo.evoapi.shop/send/text/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "221ad739-d54f-4024-b870-d40055904167"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    \"number\": $(\"Normalizar Dados Pedido\").item.json.telefone,\n    \"text\":\n      \"Perfeito, \" +\n      ($(\"Normalizar Dados Pedido\").item.json.nome_cliente || \"cliente\") +\n      \"! Tenho aqui \" +\n      ($(\"Parse Pedido IA\").item.json.quantidade || \"\") +\n      \" \" +\n      ($(\"Parse Pedido IA\").item.json.unidade || \"\") +\n      \" de \" +\n      ($(\"Parse Pedido IA\").item.json.produto || \"seu produto\") +\n      \".\\n\\nPara finalizar seu pedido, me informe por favor:\\n\" +\n      ($('Montar Contexto').first().json.tem_endereco\n        ? \"\"\n        : \"1. Endereço de entrega\\n\") +\n      ($('Montar Contexto').first().json.tem_endereco\n        ? \"1. Forma de pagamento: Pix, dinheiro ou cartão\"\n        : \"2. Forma de pagamento: Pix, dinheiro ou cartão\")\n  }\n}}",
+        "options": {}
+      },
+      "id": "node-solicitar-dado-02",
+      "name": "Solicitar Proximo Dado WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1856,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\": true}",
+        "options": {}
+      },
+      "id": "node-respond-02",
+      "name": "Respond Pedido OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2384,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## WEBHOOK E ORGANIZAÇÃO\n",
+        "height": 336,
+        "width": 592
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1040,
+        192
+      ],
+      "typeVersion": 1,
+      "id": "ff714c4b-5524-4d76-8134-66d3d2293150",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## BUSCAR PRODUTO E MONTAGEM DE CONTEXTO\n",
+        "height": 336,
+        "width": 608,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -16,
+        192
+      ],
+      "typeVersion": 1,
+      "id": "22074a3a-2172-4a03-8590-c46d5f358a28",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## AGENTE DE ATENDIMENTO E ORGANIZAÇÃO DA RESPOSTA\n",
+        "height": 480,
+        "width": 880,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        608,
+        192
+      ],
+      "typeVersion": 1,
+      "id": "3cfc7301-6924-495c-9465-ed35e3ca240d",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## CONFIRMA PEDIDO HUB E RESPONDE CLIENTE\n",
+        "height": 304,
+        "width": 592,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1728,
+        64
+      ],
+      "typeVersion": 1,
+      "id": "11df2166-95dd-4920-b34b-1c7361e5232c",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## SOLICITA MAIS ALGUM DADO CLIENTE\n",
+        "height": 304,
+        "width": 592,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1728,
+        400
+      ],
+      "typeVersion": 1,
+      "id": "e573b8fa-7492-43c2-9cb9-02e0081b0f3b",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msgOriginal = $json.mensagem ?? '';\nconst telefone = $json.telefone;\nconst nome_cliente = $json.nome_cliente;\n\nlet msg = msgOriginal\n  .replace(/\\d+\\s*(kg|g|gramas?|litros?|ml|un|unidades?|quilos?)/gi, '')\n  .replace(/r\\$\\s*\\d+[.,]?\\d*/gi, '')\n  .replace(/\\d+/g, '')\n  .trim();\n\nmsg = msg.replace(/\\b(eu|quero|comprar|pra|para|me|preciso|gostaria|queria|favor|por favor|obrigado|olá|ola|oi|bom dia|boa tarde|boa noite)\\b/gi, '');\nmsg = msg.replace(/\\s+/g, ' ').trim();\n\nconst partes = msg.split(/\\s*,\\s*|\\s+e\\s+/);\nconst produtos = partes.map(p => p.trim()).filter(p => p.length > 2);\n\nreturn [{\n  json: {\n    produtos_busca: produtos.length ? produtos : [msg],\n    mensagem: msgOriginal,\n    telefone,\n    nome_cliente\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        304
+      ],
+      "id": "f283d2d4-afcb-4c3c-ab8d-c0a9bc312c85",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputOriginal = $('Normalizar Dados Pedido').first().json;\nconst mensagem     = inputOriginal.mensagem    || '';\nconst nome_cliente = inputOriginal.nome_cliente|| '';\nconst telefone     = inputOriginal.telefone    || '';\n\n// ─── historico de mensagens anteriores ───────────────────────────────────────\nlet historicoTexto = '';\ntry {\n  const todasMensagens = $('Get many rows').all();\n\n  if (todasMensagens && todasMensagens.length > 0) {\n    const campos = ['content','mensagem','message','text'];\n\n    const mensagensValidas = todasMensagens\n      .filter(item => campos.some(c => (item.json || {})[c]))\n      .sort((a, b) =>\n        new Date(a.json.created_at || 0).getTime() -\n        new Date(b.json.created_at || 0).getTime()\n      )\n      .slice(-15);\n\n    if (mensagensValidas.length > 0) {\n      const linhas = mensagensValidas.map(item => {\n        const j    = item.json;\n        const role = (j.role === 'user' || j.role === 'cliente' || j.type === 'human')\n                     ? 'Cliente' : 'Assistente';\n        const txt  = j.content || j.mensagem || j.message || j.text || '';\n        return role + ': ' + txt;\n      });\n      historicoTexto = '\\n\\nHistórico de conversa:\\n' + linhas.join('\\n');\n    }\n  }\n} catch (e) {\n  historicoTexto = '';\n}\n\n// ─── detecta quantidade / unidade na mensagem atual ──────────────────────────\nconst qtMatch = mensagem.match(\n  /(\\d+(?:[.,]\\d+)?)\\s*(kg|kgs|quilos?|g|gramas?|litros?|l\\b|ml|un|unidades?|cx|caixas?|sacos?|pct|pacotes?)/i\n);\nconst quantidade    = qtMatch ? qtMatch[1] : null;\nconst unidadePedido = qtMatch ? qtMatch[2] : null;\nconst qtdTexto      = quantidade\n  ? '\\n\\nQuantidade detectada: ' + quantidade + ' ' + unidadePedido\n  : '';\n\nreturn [{\n  json: {\n    contexto: 'Cliente: ' + nome_cliente +\n              '\\nTelefone: ' + telefone +\n              '\\n\\nMensagem atual: ' + mensagem +\n              qtdTexto +\n              historicoTexto,\n    tem_endereco: false,\n    mensagem,\n    nome_cliente,\n    telefone\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        304
+      ],
+      "id": "23ddb758-1916-4f83-b632-21a6e0da6cf3",
+      "name": "Montar Contexto",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Normalizar Dados Pedido').item.json.telefone }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        784,
+        528
+      ],
+      "id": "57cd2140-ad1b-40ec-a658-2bfb48a23f6c",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "W57rnU1UrDOiVkzE",
+          "name": "Postgres Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## BUSCAR Histórico da conversa",
+        "height": 336,
+        "width": 384,
+        "color": "#02F740"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -432,
+        192
+      ],
+      "typeVersion": 1,
+      "id": "8ab3ea23-6d04-4c6d-9040-117b61301a6f",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## PEDIDO COMPLETO?",
+        "height": 336,
+        "width": 208,
+        "color": "#02F740"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1504,
+        192
+      ],
+      "typeVersion": 1,
+      "id": "dfec2b65-e5fc-422f-b441-629b0ca00b22",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"input\": \"{{ $json.produto }}\",\n  \"model\": \"text-embedding-3-small\"\n}",
+        "options": {}
+      },
+      "id": "emb-termo-02",
+      "name": "Gerar Embedding Termo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -224,
+        672
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "w8nIui9qhEXhVDh4",
+          "name": "OpenAI 1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zziapgnenvugyvrgrhrs.supabase.co/rest/v1/rpc/match_produtos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query_embedding\": {{ JSON.stringify($('Gerar Embedding Termo').item.json.data[0].embedding) }},\n  \"match_count\": 3,\n  \"match_threshold\": 0.3\n}",
+        "options": {}
+      },
+      "id": "match-produtos-02",
+      "name": "Buscar Produtos Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -16,
+        672
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "0RFTnsBdxjrB6USl",
+          "name": "Supabase Araujo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## BUSCAR PRODUTO",
+        "height": 336,
+        "width": 656,
+        "color": "#02F740"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -432,
+        560
+      ],
+      "typeVersion": 1,
+      "id": "8a00ca2b-ebaf-4070-9647-7a9e06b6a9ed",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "produtos",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "nome",
+              "condition": "ilike",
+              "keyValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('conditions0_Field_Value', `Nome do produto mencionado pelo cliente. Use esta tool somente quando houver produto claro. Nunca use para CEP, endereco, rua, numero, bairro, cidade ou forma de pagamento.`, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        912,
+        528
+      ],
+      "id": "abf59b71-cb48-4155-aa06-3e582298b47e",
+      "name": "Consulta Produtos",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0RFTnsBdxjrB6USl",
+          "name": "Supabase Araujo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "produtos",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "categoria",
+              "condition": "ilike",
+              "keyValue": "={{ $fromAI('conditions0_Value', `pegue o nome`, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        1072,
+        528
+      ],
+      "id": "5aab796d-2e6b-4c28-ab2b-2704d8d48860",
+      "name": "Consulta Categorias",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0RFTnsBdxjrB6USl",
+          "name": "Supabase Araujo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "produtos",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "categoria",
+              "condition": "ilike",
+              "keyValue": "={{ $fromAI('conditions0_Value', `pegue o nome`, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        512
+      ],
+      "id": "034e04a7-db69-427a-ac83-9b1845b460b4",
+      "name": "Consulta Categorias1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0RFTnsBdxjrB6USl",
+          "name": "Supabase Araujo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "chat_messages",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone",
+              "condition": "eq",
+              "keyValue": "={{ $json.telefone }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        304
+      ],
+      "id": "de04f8c5-9e2a-4687-907f-021662331670",
+      "name": "Get many rows",
+      "retryOnFail": false,
+      "executeOnce": false,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "0RFTnsBdxjrB6USl",
+          "name": "Supabase Araujo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ae4aac33-588f-4ba7-bb04-94bb52efb6d7",
+              "leftValue": "={{ $now }}",
+              "rightValue": "={{ DateTime.fromISO($json.created_at).plus({ minutes: 10 }).toISO() }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            },
+            {
+              "id": "c45bc5e4-aee7-4ecb-839d-b2c69df2d6f1",
+              "leftValue": "={{ $now }}",
+              "rightValue": "={{ DateTime.fromISO($json.created_at).plus({ minutes: 20 }).toISO() }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "before"
+              }
+            },
+            {
+              "id": "0f89d5e1-ce43-420e-971f-2bc03450cb92",
+              "leftValue": "={{ $json.active }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "boolean",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        16,
+        304
+      ],
+      "id": "8fce096a-2b3c-4d75-a601-a2102222f2f8",
+      "name": "10 min2",
+      "disabled": true
+    }
+  ],
+  "pinData": {
+    "Webhook Pedido": [
+      {
+        "json": {
+          "headers": {
+            "host": "apps-n8n-start.ugykfn.easypanel.host",
+            "user-agent": "n8n",
+            "content-length": "219",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "x-forwarded-for": "172.16.1.1",
+            "x-forwarded-host": "apps-n8n-start.ugykfn.easypanel.host",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "6a84647ad003",
+            "x-real-ip": "172.16.1.1"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "mensagem": "11442080",
+            "telefone": "5513981085275",
+            "nome_cliente": "Emerson",
+            "canal": "whatsapp",
+            "intencao": "fazer_pedido",
+            "endereco": {
+              "cep": "",
+              "logradouro": "",
+              "numero": "",
+              "complemento": "",
+              "bairro": "",
+              "cidade": "",
+              "uf": ""
+            }
+          },
+          "webhookUrl": "https://apps-n8n-start.ugykfn.easypanel.host/webhook/fechamento-pedido",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook Pedido": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Dados Pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Dados Pedido": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente IA Pedido": {
+      "main": [
+        [
+          {
+            "node": "Parse Pedido IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Pedido IA": {
+      "main": [
+        [
+          {
+            "node": "Pedido Completo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pedido Completo?": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Pedido no Hub",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Solicitar Proximo Dado WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Pedido no Hub": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Pedido WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Pedido WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Respond Pedido OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Solicitar Proximo Dado WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Respond Pedido OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model Pedido": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente IA Pedido",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Contexto": {
+      "main": [
+        [
+          {
+            "node": "Agente IA Pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente IA Pedido",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar Embedding Termo": {
+      "main": [
+        [
+          {
+            "node": "Buscar Produtos Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Produtos Supabase": {
+      "main": [
+        []
+      ]
+    },
+    "Consulta Produtos": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente IA Pedido",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consulta Categorias": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente IA Pedido",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Montar Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "b231a00b-41f1-4ad7-89ef-667b6c60eb9e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dbc381b341b27c8eb54462163acf41a1eabfb2a77579172f7e0e72e41d42e0b3"
+  },
+  "id": "rnv9wmmIUx4RyRvq",
+  "tags": []
+}

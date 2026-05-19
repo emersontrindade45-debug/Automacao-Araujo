@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Etapa, ItemPedido } from "@/lib/types";
 
 const EVOLUTION_URL =
@@ -48,7 +48,7 @@ export async function notificarEtapaCliente(
   if (etapa !== "separacao" && etapa !== "em_rota") return;
 
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { data: cliente } = await supabase
       .from("clientes")
@@ -88,7 +88,7 @@ export async function notificarEtapaPedido(
   if (etapa !== "separacao" && etapa !== "em_rota") return;
 
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { data: pedido } = await supabase
       .from("pedidos")

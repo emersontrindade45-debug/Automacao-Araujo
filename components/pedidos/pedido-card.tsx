@@ -67,6 +67,7 @@ export function PedidoCard({ pedido, clienteNome }: PedidoCardProps) {
         {/* Endereço */}
         {pedido.endereco_entrega && (
           <div className="flex items-start gap-1.5 mt-3 text-xs text-muted">
+<<<<<<< HEAD
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 16 16"
@@ -80,6 +81,10 @@ export function PedidoCard({ pedido, clienteNome }: PedidoCardProps) {
               />
             </svg>
             <span className="line-clamp-2 leading-snug">{pedido.endereco_entrega}</span>
+=======
+            <span className="shrink-0 mt-px">📍</span>
+            <span className="truncate">{pedido.endereco_entrega}</span>
+>>>>>>> 6fcb4d6 (feat(pedidos): exibe endereço de entrega no card do pedido)
           </div>
         )}
 

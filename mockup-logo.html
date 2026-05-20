@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Mockup — Logo na Sidebar</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f0f0f;
+    color: #e5e5e5;
+    display: flex;
+    gap: 48px;
+    padding: 48px;
+    min-height: 100vh;
+    align-items: flex-start;
+  }
+
+  .column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #888;
+  }
+
+  /* Sidebar simulada */
+  .sidebar {
+    width: 224px;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    height: 56px;
+    padding: 0 20px;
+    border-bottom: 1px solid #2a2a2a;
+    gap: 10px;
+  }
+
+  /* Atual: quadrado âmbar com "A" */
+  .logo-current {
+    width: 28px;
+    height: 28px;
+    background: #e89309;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .sidebar-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e5e5e5;
+  }
+
+  /* Opção A: só logo */
+  .logo-img-full {
+    height: 34px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  /* Opção B: logo menor + "Hub" */
+  .logo-img-small {
+    height: 28px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  .hub-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: #888;
+    letter-spacing: 0.04em;
+    border-left: 1px solid #3a3a3a;
+    padding-left: 10px;
+    margin-left: 2px;
+  }
+
+  /* Nav items fictícios */
+  .nav {
+    padding: 12px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #aaa;
+  }
+  .nav-item.active {
+    background: rgba(232, 147, 9, 0.12);
+    color: #e89309;
+  }
+  .nav-icon {
+    width: 16px;
+    height: 16px;
+    background: currentColor;
+    border-radius: 3px;
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+  <!-- ATUAL -->
+  <div class="column">
+    <span class="label">Atual</span>
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-current">A</div>
+        <span class="sidebar-title">Araujo Hub</span>
+      </div>
+      <div class="nav">
+        <div class="nav-item active"><div class="nav-icon"></div> Atendimento</div>
+        <div class="nav-item"><div class="nav-icon"></div> Catálogo</div>
+        <div class="nav-item"><div class="nav-icon"></div> Configurações</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPÇÃO A -->
+  <div class="column">
+    <span class="label">Opção A — Logo sozinho</span>
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <img src="./logo-araujo.png" alt="Araujo" class="logo-img-full" />
+      </div>
+      <div class="nav">
+        <div class="nav-item active"><div class="nav-icon"></div> Atendimento</div>
+        <div class="nav-item"><div class="nav-icon"></div> Catálogo</div>
+        <div class="nav-item"><div class="nav-icon"></div> Configurações</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPÇÃO B -->
+  <div class="column">
+    <span class="label">Opção B — Logo + "Hub"</span>
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <img src="./logo-araujo.png" alt="Araujo" class="logo-img-small" />
+        <span class="hub-badge">Hub</span>
+      </div>
+      <div class="nav">
+        <div class="nav-item active"><div class="nav-icon"></div> Atendimento</div>
+        <div class="nav-item"><div class="nav-icon"></div> Catálogo</div>
+        <div class="nav-item"><div class="nav-icon"></div> Configurações</div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

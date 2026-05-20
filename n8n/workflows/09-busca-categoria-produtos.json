@@ -1,0 +1,72 @@
+{
+  "name": "Fluxo 9 - Busca Categoria Produtos",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            { "name": "categoria" }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "id": "f9-trigger",
+      "name": "Receber Categoria",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://zziapgnenvugyvrgrhrs.supabase.co/rest/v1/produtos?select=id,nome,preco_atual,unidade,estoque_atual&categoria=ilike.*{{ encodeURIComponent($json.categoria || '') }}*&ativo=eq.true&order=nome.asc",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [460, 300],
+      "id": "f9-query",
+      "name": "Buscar por Categoria",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0RFTnsBdxjrB6USl",
+          "name": "Supabase Araujo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const categoria = $('Receber Categoria').first().json.categoria || '';\nconst resultados = $input.first().json;\n\nconst lista = Array.isArray(resultados) ? resultados : [];\n\nif (lista.length === 0) {\n  return [{\n    json: {\n      resultado: `Nenhum produto encontrado na categoria \"${categoria}\".`,\n      produtos: []\n    }\n  }];\n}\n\nconst formatarPreco = (v) =>\n  Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });\n\nconst linhas = lista.map((p) => {\n  const disponivel = Number(p.estoque_atual || 0) > 0;\n  const status = disponivel ? 'disponível' : 'sem estoque';\n  const preco = formatarPreco(p.preco_atual || 0);\n  const unidade = p.unidade || 'un';\n  return `- ${p.nome}: ${preco}/${unidade} (${status})`;\n});\n\nreturn [{\n  json: {\n    resultado: `Produtos da categoria ${categoria}:\\n` + linhas.join('\\n'),\n    produtos: lista.map((p) => ({\n      produto_id: p.id || '',\n      nome: p.nome || '',\n      preco_unitario: Number(p.preco_atual || 0),\n      unidade: p.unidade || 'un',\n      estoque: Number(p.estoque_atual || 0)\n    }))\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "id": "f9-formatar",
+      "name": "Formatar Resultado"
+    }
+  ],
+  "connections": {
+    "Receber Categoria": {
+      "main": [[{ "node": "Buscar por Categoria", "type": "main", "index": 0 }]]
+    },
+    "Buscar por Categoria": {
+      "main": [[{ "node": "Formatar Resultado", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

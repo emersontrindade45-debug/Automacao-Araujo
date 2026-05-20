@@ -8,6 +8,7 @@ const navAll = [{ href: "/configuracoes/conta", label: "Conta e segurança" }] a
 const navAdmin = [
   { href: "/configuracoes/follow-up", label: "Follow-up automático" },
   { href: "/configuracoes/usuarios", label: "Usuários e papéis" },
+  { href: "/configuracoes/funcionarios", label: "Funcionários autorizados" },
   { href: "/configuracoes/canais", label: "Canais de entrada" },
   { href: "/configuracoes/automacao", label: "Handoff e automação" },
   { href: "/configuracoes/precos", label: "Preços e catálogo" },

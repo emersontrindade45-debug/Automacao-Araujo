@@ -11,7 +11,7 @@ export async function aprovarPrecoAction(precoId: string) {
   const supabase = createAdminClient();
   const { data: registro } = await supabase
     .from("precos")
-    .select("preco_novo, solicitado_por, produtos(nome)")
+    .select("preco_novo, solicitado_por, telefone, produtos(nome)")
     .eq("id", precoId)
     .single();
 
@@ -25,6 +25,7 @@ export async function aprovarPrecoAction(precoId: string) {
       produto_nome: produto?.nome ?? "",
       preco_novo: registro.preco_novo,
       solicitado_por: registro.solicitado_por ?? "",
+      telefone: registro.telefone ?? "",
     });
   }
 }

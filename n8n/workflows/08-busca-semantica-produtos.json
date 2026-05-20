@@ -1,0 +1,103 @@
+{
+  "name": "Fluxo 8 - Busca Semantica Produtos",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "termo"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "id": "f8-trigger",
+      "name": "Receber Termo",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"input\": \"{{ $json.termo }}\",\n  \"model\": \"text-embedding-3-small\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [460, 300],
+      "id": "f8-embedding",
+      "name": "Gerar Embedding",
+      "credentials": {
+        "openAiApi": {
+          "id": "w8nIui9qhEXhVDh4",
+          "name": "OpenAI 1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zziapgnenvugyvrgrhrs.supabase.co/rest/v1/rpc/match_produtos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query_embedding\": {{ JSON.stringify($json.data[0].embedding) }},\n  \"match_count\": 5,\n  \"match_threshold\": 0.3\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [680, 300],
+      "id": "f8-match",
+      "name": "Buscar Produtos Similares",
+      "credentials": {
+        "supabaseApi": {
+          "id": "0RFTnsBdxjrB6USl",
+          "name": "Supabase Araujo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const termo = $('Receber Termo').first().json.termo || '';\nconst resultados = $input.first().json;\n\nconst lista = Array.isArray(resultados) ? resultados : [];\n\nif (lista.length === 0) {\n  return [{\n    json: {\n      resultado: `Nenhum produto encontrado para \"${termo}\". Tente um nome diferente ou consulte por categoria.`,\n      produtos: []\n    }\n  }];\n}\n\nconst formatarPreco = (v) =>\n  Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });\n\nconst linhas = lista.map((p) => {\n  const disponivel = Number(p.estoque_atual || p.estoque || 0) > 0;\n  const status = disponivel ? 'disponível' : 'sem estoque';\n  const preco = formatarPreco(p.preco_atual || p.preco || 0);\n  const unidade = p.unidade || 'un';\n  return `- ${p.nome}: ${preco}/${unidade} (${status})`;\n});\n\nreturn [{\n  json: {\n    resultado: linhas.join('\\n'),\n    produtos: lista.map((p) => ({\n      produto_id: p.id || '',\n      nome: p.nome || '',\n      preco_unitario: Number(p.preco_atual || p.preco || 0),\n      unidade: p.unidade || 'un',\n      estoque: Number(p.estoque_atual || p.estoque || 0)\n    }))\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "id": "f8-formatar",
+      "name": "Formatar Resultado"
+    }
+  ],
+  "connections": {
+    "Receber Termo": {
+      "main": [[{ "node": "Gerar Embedding", "type": "main", "index": 0 }]]
+    },
+    "Gerar Embedding": {
+      "main": [[{ "node": "Buscar Produtos Similares", "type": "main", "index": 0 }]]
+    },
+    "Buscar Produtos Similares": {
+      "main": [[{ "node": "Formatar Resultado", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

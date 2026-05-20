@@ -1,0 +1,1 @@
+ALTER TABLE precos ADD COLUMN IF NOT EXISTS telefone text;

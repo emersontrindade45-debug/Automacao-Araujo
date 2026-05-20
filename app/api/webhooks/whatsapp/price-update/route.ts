@@ -38,6 +38,19 @@ export async function POST(request: NextRequest) {
   const telefone = evolutionGetTelefone(data);
   const solicitadoPor = data.pushName ?? telefone;
 
+  const supabase = createAdminClient();
+  const telefoneNumerico = telefone.replace(/\D/g, "");
+  const { data: autorizado } = await supabase
+    .from("funcionarios_autorizados")
+    .select("id")
+    .eq("telefone", telefoneNumerico)
+    .eq("ativo", true)
+    .maybeSingle();
+
+  if (!autorizado) {
+    return NextResponse.json({ ok: true });
+  }
+
   let textoParaAnalise: string | null = null;
 
   if (evolutionIsAudio(data)) {
@@ -61,7 +74,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const supabase = createAdminClient();
   const adminEmail = process.env.ADMIN_EMAIL;
 
   const { data: produtos } = await supabase
@@ -88,6 +100,7 @@ export async function POST(request: NextRequest) {
       preco_novo: detectado.valor,
       status: "pendente",
       solicitado_por: solicitadoPor,
+      telefone,
     })
     .select()
     .single();

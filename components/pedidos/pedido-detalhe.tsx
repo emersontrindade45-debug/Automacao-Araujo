@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import type { Pedido, ItemPedido, Etapa } from "@/lib/types";
 import { EtapaBadge, etapaLabels } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { confirmarPedidoAction } from "@/app/(crm)/pedidos/actions";
 
 interface PedidoDetalheProps {
   pedido: Pedido;
@@ -23,13 +24,15 @@ const PROXIMA_ETAPA: Partial<Record<Etapa, Etapa>> = {
   fechamento: "pedido_gerado",
   pedido_gerado: "separacao",
   separacao: "em_rota",
-  em_rota: "pos_venda",
+  em_rota: "entregue",
+  entregue: "pos_venda",
 };
 
 export function PedidoDetalhe({ pedido, clienteNome }: PedidoDetalheProps) {
   const [itens, setItens] = useState<ItemPedido[]>(pedido.itens);
   const [status, setStatus] = useState<Etapa>(pedido.status);
   const [confirmado, setConfirmado] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const total = itens.reduce((acc, item) => acc + item.quantidade * item.preco_unitario, 0);
   const proximaEtapa = PROXIMA_ETAPA[status];
@@ -45,8 +48,10 @@ export function PedidoDetalhe({ pedido, clienteNome }: PedidoDetalheProps) {
   }
 
   function confirmarPedido() {
+    if (!proximaEtapa) return;
     setConfirmado(true);
-    if (proximaEtapa) setStatus(proximaEtapa);
+    setStatus(proximaEtapa);
+    startTransition(() => confirmarPedidoAction(pedido.id, proximaEtapa));
   }
 
   return (

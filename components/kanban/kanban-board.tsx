@@ -10,7 +10,7 @@ import { moverEtapaAction } from "@/app/(crm)/clientes/actions";
 
 const ETAPAS: Etapa[] = [
   "novo", "atendimento", "fechamento", "pedido_gerado",
-  "separacao", "em_rota", "pos_venda", "follow_up", "marketing",
+  "separacao", "em_rota", "entregue", "pos_venda", "follow_up", "marketing",
 ];
 
 interface KanbanBoardProps {

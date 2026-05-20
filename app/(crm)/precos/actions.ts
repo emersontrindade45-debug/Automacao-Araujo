@@ -4,10 +4,29 @@ import { updateStatusPreco, aprovarPreco } from "@/lib/supabase/queries/precos";
 import { updateProduto, upsertProdutosEmLote } from "@/lib/supabase/queries/produtos";
 import type { LinhaPlanilha } from "@/lib/supabase/queries/produtos";
 import { revalidatePath } from "next/cache";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { dispararWebhookN8n } from "@/lib/n8n/client";
 
 export async function aprovarPrecoAction(precoId: string) {
+  const supabase = createAdminClient();
+  const { data: registro } = await supabase
+    .from("precos")
+    .select("preco_novo, solicitado_por, produtos(nome)")
+    .eq("id", precoId)
+    .single();
+
   await aprovarPreco(precoId);
   revalidatePath("/precos");
+
+  if (registro) {
+    const produtoRaw = registro.produtos;
+    const produto = (Array.isArray(produtoRaw) ? produtoRaw[0] : produtoRaw) as { nome: string } | null;
+    await dispararWebhookN8n("price-update", {
+      produto_nome: produto?.nome ?? "",
+      preco_novo: registro.preco_novo,
+      solicitado_por: registro.solicitado_por ?? "",
+    });
+  }
 }
 
 export async function rejeitarPrecoAction(precoId: string) {

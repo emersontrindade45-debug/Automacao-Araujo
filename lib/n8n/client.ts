@@ -1,10 +1,11 @@
-type N8nWebhookName = "atendimento" | "handoff" | "price-update" | "follow-up";
+type N8nWebhookName = "atendimento" | "handoff" | "price-update" | "follow-up" | "notificacao-etapa";
 
 const WEBHOOK_URLS: Record<N8nWebhookName, string | undefined> = {
   atendimento: process.env.N8N_WEBHOOK_ATENDIMENTO_URL,
   handoff: process.env.N8N_WEBHOOK_HANDOFF_URL,
   "price-update": process.env.N8N_WEBHOOK_PRICE_UPDATE_URL,
   "follow-up": process.env.N8N_WEBHOOK_FOLLOW_UP_URL,
+  "notificacao-etapa": process.env.N8N_WEBHOOK_NOTIFICACAO_ETAPA_URL,
 };
 
 export async function dispararWebhookN8n<T>(

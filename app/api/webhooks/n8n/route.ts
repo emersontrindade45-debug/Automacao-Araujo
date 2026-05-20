@@ -10,7 +10,10 @@ type HandoffTipo =
 
 interface N8nHandoffBody {
   tipo: HandoffTipo;
-  handoff: HandoffPayload;
+  handoff: HandoffPayload & {
+    endereco_entrega?: string;
+    forma_pagamento?: string;
+  };
   atendente_email?: string;
 }
 
@@ -66,8 +69,8 @@ export async function POST(request: NextRequest) {
         cliente_id: cliente.id,
         itens: handoff.itens_pedido,
         status: "pedido_gerado",
-        endereco_entrega: "",
-        forma_pagamento: "",
+        endereco_entrega: handoff.endereco_entrega ?? "",
+        forma_pagamento: handoff.forma_pagamento ?? "",
         total,
       })
       .select("id, numero_pedido")

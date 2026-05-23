@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useTransition } from "react";
 import type { Cliente } from "@/lib/types";
 import { EtapaBadge, CanalBadge, etapaLabels } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { mockHistorico } from "@/lib/mock/clientes";
+import { getStatusIAAction, pausarIAAction, reativarIAAction } from "@/app/(crm)/clientes/actions";
 import type { Etapa } from "@/lib/types";
 
 const ETAPAS: Etapa[] = [
@@ -40,10 +41,27 @@ export function KanbanPanel({ cliente, onClose, onMoverEtapa }: KanbanPanelProps
   const valorFinalParsed = parseFloat(valorFinal);
   const valorFinalValido = !isNaN(valorFinalParsed) && valorFinalParsed > 0;
 
+  const [statusIA, setStatusIA] = useState<"ativa" | "pausada" | null>(null);
+  const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    getStatusIAAction(cliente.telefone).then(setStatusIA);
+  }, [cliente.telefone]);
+
   function handleAvancar() {
     if (!proximaEtapa) return;
     if (precisaValorFinal && !valorFinalValido) return;
     onMoverEtapa(cliente.id, proximaEtapa, precisaValorFinal ? valorFinalParsed : undefined);
+  }
+
+  function handleHandoff() {
+    setStatusIA("pausada");
+    startTransition(() => pausarIAAction(cliente.telefone));
+  }
+
+  function handleReativar() {
+    setStatusIA("ativa");
+    startTransition(() => reativarIAAction(cliente.telefone));
   }
 
   return (
@@ -141,13 +159,24 @@ export function KanbanPanel({ cliente, onClose, onMoverEtapa }: KanbanPanelProps
               Avançar para {etapaLabels[proximaEtapa]}
             </Button>
           )}
-          <Button
-            variant="ghost"
-            className="w-full text-brand"
-            onClick={() => {}}
-          >
-            Fazer Handoff para Atendente
-          </Button>
+          {statusIA === "pausada" ? (
+            <Button
+              variant="ghost"
+              className="w-full text-success"
+              onClick={handleReativar}
+            >
+              ✓ IA pausada — Devolver para IA
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              className="w-full text-brand"
+              onClick={handleHandoff}
+              disabled={statusIA === null}
+            >
+              Fazer Handoff para Atendente
+            </Button>
+          )}
         </div>
       </aside>
     </>

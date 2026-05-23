@@ -3,6 +3,7 @@
 import { getClienteById, updateEtapaCliente } from "@/lib/supabase/queries/clientes";
 import { getPedidosByCliente, updateStatusPedido, updateValorFinal } from "@/lib/supabase/queries/pedidos";
 import { dispararWebhookN8n } from "@/lib/n8n/client";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { Etapa } from "@/lib/types";
 
@@ -58,4 +59,32 @@ async function notificarEtapa(clienteId: string, etapa: Etapa, valorFinal?: numb
     itens: pedidoAtivo?.itens ?? [],
     ...(etapa === "em_rota" && valorFinal != null ? { valor_final: valorFinal } : {}),
   });
+}
+
+export async function getStatusIAAction(telefone: string): Promise<"ativa" | "pausada"> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("dados_cliente")
+    .select("atendimento_ia")
+    .eq("telefone", telefone)
+    .single();
+
+  if (data?.atendimento_ia?.startsWith("pause")) return "pausada";
+  return "ativa";
+}
+
+export async function pausarIAAction(telefone: string) {
+  const supabase = await createClient();
+  await supabase
+    .from("dados_cliente")
+    .update({ atendimento_ia: "pause" })
+    .eq("telefone", telefone);
+}
+
+export async function reativarIAAction(telefone: string) {
+  const supabase = await createClient();
+  await supabase
+    .from("dados_cliente")
+    .update({ atendimento_ia: "reativada" })
+    .eq("telefone", telefone);
 }

@@ -89,7 +89,16 @@ export function PedidoCard({ pedido, clienteNome }: PedidoCardProps) {
             <span>{pagamentoIcon[pedido.forma_pagamento] ?? "💰"}</span>
             <span>{pedido.forma_pagamento}</span>
           </div>
-          <p className="font-semibold text-foreground text-sm">{formatMoeda(pedido.total)}</p>
+          <div className="text-right">
+            {pedido.valor_final != null ? (
+              <>
+                <p className="font-semibold text-success text-sm">{formatMoeda(pedido.valor_final)}</p>
+                <p className="text-xs text-subtle line-through">{formatMoeda(pedido.total)}</p>
+              </>
+            ) : (
+              <p className="font-semibold text-foreground text-sm">{formatMoeda(pedido.total)}</p>
+            )}
+          </div>
         </div>
       </div>
     </Link>

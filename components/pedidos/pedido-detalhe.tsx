@@ -33,7 +33,7 @@ export function PedidoDetalhe({ pedido, clienteNome }: PedidoDetalheProps) {
   const [status, setStatus] = useState<Etapa>(pedido.status);
   const [confirmado, setConfirmado] = useState(false);
   const [valorFinal, setValorFinal] = useState<string>("");
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const total = itens.reduce((acc, item) => acc + item.quantidade * item.preco_unitario, 0);
   const proximaEtapa = PROXIMA_ETAPA[status];
@@ -52,10 +52,11 @@ export function PedidoDetalhe({ pedido, clienteNome }: PedidoDetalheProps) {
   function confirmarPedido() {
     if (!proximaEtapa) return;
     if (precisaValorFinal && !valorFinal) return;
-    const valorFinalNum = precisaValorFinal ? parseFloat(valorFinal.replace(",", ".")) : undefined;
+    const parsed = precisaValorFinal ? parseFloat(valorFinal) : undefined;
+    if (parsed !== undefined && (isNaN(parsed) || parsed <= 0)) return;
     setConfirmado(true);
     setStatus(proximaEtapa);
-    startTransition(() => confirmarPedidoAction(pedido.id, proximaEtapa, valorFinalNum));
+    startTransition(() => confirmarPedidoAction(pedido.id, proximaEtapa, parsed));
   }
 
   return (
@@ -175,7 +176,7 @@ export function PedidoDetalhe({ pedido, clienteNome }: PedidoDetalheProps) {
           <Button
             variant="primary"
             onClick={confirmarPedido}
-            disabled={precisaValorFinal && !valorFinal}
+            disabled={precisaValorFinal && (!valorFinal || parseFloat(valorFinal) <= 0 || isNaN(parseFloat(valorFinal)))}
           >
             Confirmar e avançar para {etapaLabels[proximaEtapa]}
           </Button>

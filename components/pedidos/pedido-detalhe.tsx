@@ -32,10 +32,12 @@ export function PedidoDetalhe({ pedido, clienteNome }: PedidoDetalheProps) {
   const [itens, setItens] = useState<ItemPedido[]>(pedido.itens);
   const [status, setStatus] = useState<Etapa>(pedido.status);
   const [confirmado, setConfirmado] = useState(false);
+  const [valorFinal, setValorFinal] = useState<string>("");
   const [isPending, startTransition] = useTransition();
 
   const total = itens.reduce((acc, item) => acc + item.quantidade * item.preco_unitario, 0);
   const proximaEtapa = PROXIMA_ETAPA[status];
+  const precisaValorFinal = status === "separacao";
 
   function updateQuantidade(index: number, valor: number) {
     setItens((prev) =>
@@ -49,9 +51,11 @@ export function PedidoDetalhe({ pedido, clienteNome }: PedidoDetalheProps) {
 
   function confirmarPedido() {
     if (!proximaEtapa) return;
+    if (precisaValorFinal && !valorFinal) return;
+    const valorFinalNum = precisaValorFinal ? parseFloat(valorFinal.replace(",", ".")) : undefined;
     setConfirmado(true);
     setStatus(proximaEtapa);
-    startTransition(() => confirmarPedidoAction(pedido.id, proximaEtapa));
+    startTransition(() => confirmarPedidoAction(pedido.id, proximaEtapa, valorFinalNum));
   }
 
   return (
@@ -132,16 +136,47 @@ export function PedidoDetalhe({ pedido, clienteNome }: PedidoDetalheProps) {
             ))}
           </div>
         </CardContent>
-        <CardFooter className="justify-between">
-          <span className="text-sm font-semibold text-foreground">Total</span>
-          <span className="text-lg font-bold text-foreground">{formatMoeda(total)}</span>
+        <CardFooter className="flex-col items-stretch gap-2">
+          <div className="flex justify-between">
+            <span className="text-sm font-semibold text-foreground">Total estimado</span>
+            <span className="text-lg font-bold text-foreground">{formatMoeda(total)}</span>
+          </div>
+          {pedido.valor_final != null && (
+            <div className="flex justify-between pt-2 border-t border-border">
+              <span className="text-sm font-semibold text-foreground">Valor final (pós-pesagem)</span>
+              <span className="text-lg font-bold text-success">{formatMoeda(pedido.valor_final)}</span>
+            </div>
+          )}
         </CardFooter>
       </Card>
+
+      {/* Campo valor final — aparece apenas ao mover de separação para em rota */}
+      {!confirmado && precisaValorFinal && (
+        <Card>
+          <CardContent className="pt-5">
+            <p className="text-sm font-medium text-foreground mb-2">Valor final após pesagem</p>
+            <p className="text-xs text-muted mb-3">Informe o valor real após a separação. Será enviado ao cliente junto com a notificação de saída para entrega.</p>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Ex: 134.50"
+              value={valorFinal}
+              onChange={(e) => setValorFinal(e.target.value)}
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-brand/40"
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Actions */}
       {!confirmado && proximaEtapa && (
         <div className="flex justify-end">
-          <Button variant="primary" onClick={confirmarPedido}>
+          <Button
+            variant="primary"
+            onClick={confirmarPedido}
+            disabled={precisaValorFinal && !valorFinal}
+          >
             Confirmar e avançar para {etapaLabels[proximaEtapa]}
           </Button>
         </div>

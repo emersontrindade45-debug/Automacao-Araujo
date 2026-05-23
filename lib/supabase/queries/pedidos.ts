@@ -45,3 +45,13 @@ export async function updateStatusPedido(id: string, status: Etapa) {
 
   if (error) throw error;
 }
+
+export async function updateValorFinal(id: string, valor_final: number) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("pedidos")
+    .update({ valor_final })
+    .eq("id", id);
+
+  if (error) throw error;
+}

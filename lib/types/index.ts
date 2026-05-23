@@ -53,6 +53,7 @@ export interface Pedido {
   endereco_entrega: string;
   forma_pagamento: string;
   total: number;
+  valor_final?: number | null;
   criado_em: string;
   atualizado_em: string;
 }

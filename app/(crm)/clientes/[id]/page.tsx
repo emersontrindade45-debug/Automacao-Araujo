@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getClienteById } from "@/lib/supabase/queries/clientes";
 import { getPedidosByCliente } from "@/lib/supabase/queries/pedidos";
+import { getLogsByCliente } from "@/lib/supabase/queries/logs";
+import type { LogEvento } from "@/lib/types";
 import { EtapaBadge, CanalBadge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +35,60 @@ function formatMoeda(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+const TIPO_LABELS: Record<string, { label: string; cor: string }> = {
+  handoff_pedido_confirmado: { label: "Pedido confirmado", cor: "text-green-600" },
+  handoff_ambiguo:           { label: "Handoff para humano", cor: "text-yellow-600" },
+  handoff_sem_resposta:      { label: "Sem resposta", cor: "text-red-500" },
+  handoff_separacao_completa:{ label: "Separação completa", cor: "text-blue-600" },
+};
+
+function LogEventoItem({ log }: { log: LogEvento }) {
+  const meta = TIPO_LABELS[log.tipo] ?? { label: log.tipo, cor: "text-muted" };
+  const handoff = log.payload?.handoff;
+  const proximaAcao = log.payload?.proxima_acao ?? handoff?.proxima_acao;
+
+  return (
+    <div className="flex gap-3 p-3 rounded-lg border border-border text-sm">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <span className={`font-medium ${meta.cor}`}>{meta.label}</span>
+          <span className="text-xs text-subtle shrink-0">{formatData(log.criado_em)}</span>
+        </div>
+        {proximaAcao && (
+          <p className="text-muted mt-1">Próxima ação: {proximaAcao}</p>
+        )}
+        {handoff?.itens_pedido && handoff.itens_pedido.length > 0 && (
+          <div className="mt-2 space-y-0.5">
+            {handoff.itens_pedido.map((item, i) => (
+              <p key={i} className="text-xs text-muted">
+                {item.quantidade}× {item.nome} — {formatMoeda(item.preco_unitario * item.quantidade)}
+              </p>
+            ))}
+          </div>
+        )}
+        {handoff?.forma_pagamento && (
+          <p className="text-xs text-muted mt-1">Pagamento: {handoff.forma_pagamento}</p>
+        )}
+        {handoff?.endereco_entrega && (
+          <p className="text-xs text-muted">Entrega: {handoff.endereco_entrega}</p>
+        )}
+        {handoff?.ultimas_mensagens && handoff.ultimas_mensagens.length > 0 && (
+          <details className="mt-2">
+            <summary className="text-xs text-subtle cursor-pointer hover:text-foreground">
+              Ver últimas mensagens ({handoff.ultimas_mensagens.length})
+            </summary>
+            <ul className="mt-1 space-y-0.5 pl-2 border-l border-border">
+              {handoff.ultimas_mensagens.map((m, i) => (
+                <li key={i} className="text-xs text-muted">{m}</li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export async function generateMetadata({ params }: Props) {
   const { id } = await params;
   try {
@@ -53,7 +109,10 @@ export default async function ClienteDetalhe({ params }: Props) {
     notFound();
   }
 
-  const pedidos = await getPedidosByCliente(id);
+  const [pedidos, logs] = await Promise.all([
+    getPedidosByCliente(id),
+    getLogsByCliente(id).catch(() => [] as LogEvento[]),
+  ]);
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -128,10 +187,18 @@ export default async function ClienteDetalhe({ params }: Props) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Histórico</CardTitle>
+          <CardTitle>Histórico ({logs.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted">Histórico via logs será implementado no M4.</p>
+          {logs.length === 0 ? (
+            <p className="text-sm text-muted">Nenhum evento registrado ainda.</p>
+          ) : (
+            <div className="space-y-3">
+              {logs.map((log) => (
+                <LogEventoItem key={log.id} log={log} />
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -19,6 +19,31 @@
 
 - [x] Elaborar fluxos n8n com IA (atendimento, fechamento, handoff, follow-up) — M7 concluído
 - [x] Integrar Supabase com fluxos n8n — Realtime ativo em `produtos`, mutations via service role
+- [x] Implementar RBAC completo — middleware, sidebar, acesso por papel (`admin`, `atendimento`, `separacao`, `expedicao`, `followup`)
+- [x] Funcionários autorizados — menu de configurações com gestão de usuários por admin
+- [x] Fluxo 5 com restrição por funcionário autorizado — autorização via Supabase antes de executar ação
+- [x] Fluxo 6 — Cadastro de endereço via CEP (ViaCEP) com fallback para cidade Guarujá
+- [x] Fluxo 7 — Atualização de preços via WhatsApp (texto/áudio)
+- [x] Fluxo 8 — Busca semântica de produtos com embeddings + pgvector
+- [x] Fluxo 9 — Busca por categoria de produtos
+- [x] Prompt `Agente Atendimento1` otimizado: cabeçalho JSON estruturado, roteiro anti-alucinação, intents `saudacao|consulta_preco|fazer_pedido|fechar_pedido|humano`
+- [x] RAG (Fluxo 1): Agente RAG injeta base de conhecimento antes de `Agente Atendimento1` — intent `duvida` removida
+- [x] CEP removido do agente — tratado exclusivamente pelo Fluxo 6
+
+## M9 — Fluxos N8n Avançados e Otimizações (2026-05-23)
+
+- [x] Fluxo 6: CEP com fallback cidade Guarujá — `Consulta CEP2` e `Consultar ViaCep`
+- [x] Fluxo 7: Atualização de preços via WhatsApp (texto e áudio com Whisper)
+- [x] Fluxo 8: Busca semântica via embeddings e pgvector (`match_documents`)
+- [x] Fluxo 9: Busca por categoria de produtos
+- [x] RBAC completo com middleware e sidebar dinâmica por papel
+- [x] Funcionários autorizados gerenciáveis em `/configuracoes`
+- [x] Fluxo 5 com verificação de funcionário autorizado no Supabase
+- [x] Prompt `Agente Atendimento1` refatorado com cabeçalho JSON + roteiro anti-alucinação
+- [x] Parse Resposta IA2: fallback de intent alterado para `humano`
+- [x] Montar Prompt2: instrução CEP removida, intents atualizados
+
+---
 
 ## M8 — Concluído (2026-05-13)
 

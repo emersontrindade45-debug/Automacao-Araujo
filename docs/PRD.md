@@ -78,9 +78,11 @@ O N8n responde sobre:
 
 O sistema deve:
 
-- Identificar intenção
+- Identificar intenção (`saudacao`, `consulta_preco`, `fazer_pedido`, `fechar_pedido`, `humano`)
 - Detectar etapa do funil
-- Decidir entre automação ou humano
+- Decidir entre automação ou humano (intent `humano` → Fluxo 3 Handoff)
+
+> WhatsApp integrado via **Evolution API** (não Meta Graph API direta). RAG injeta base de conhecimento da loja antes do agente de atendimento.
 
 ### 4.3 Fechamento
 

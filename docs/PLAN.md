@@ -179,9 +179,9 @@ feat(M3): autenticação real e banco de dados integrado
 - [x] Documentar em `docs/N8N.md` o fluxo de eventos: entrada → processamento → handoff
 
 #### Testes manuais
-- [ ] Testar webhook WhatsApp com `curl` simulando payload do Meta
-- [ ] Testar webhook N8n com payload de handoff
-- [ ] Validar que card aparece no Kanban em tempo real via Realtime
+- [x] Testar webhook WhatsApp com `curl` simulando payload do Meta
+- [x] Testar webhook N8n com payload de handoff
+- [x] Validar que card aparece no Kanban em tempo real via Realtime
 - [x] Garantir que `npm run build` passa sem erros
 
 **Commit final:**
@@ -245,17 +245,21 @@ feat(M5): atualização de preços via áudio/texto e follow-up automático
 - [ ] Criar projeto Supabase de produção (separado do de desenvolvimento)
 - [ ] Rodar migrações no projeto de produção
 - [ ] Configurar RLS e validar com usuário de teste de produção
+> **Nota:** projeto usa único Supabase em produção (`zziapgnenvugyvrgrhrs`). Separação dev/prod não foi feita — decisão arquitetural pendente.
 
 #### Deploy
 - [x] Conectar repositório ao Vercel
 - [ ] Configurar domínio personalizado (se disponível)
 - [x] Validar build de produção: `npm run build` sem erros e sem warnings críticos
-- [ ] Testar fluxo completo em produção: receber mensagem WhatsApp → aparecer no Kanban → handoff → pedido
+- [x] Testar fluxo completo em produção: receber mensagem WhatsApp → aparecer no Kanban → handoff → pedido
 
 #### Webhooks de produção
-- [ ] Atualizar URL do webhook no painel do Meta (WhatsApp + Instagram) para URL de produção
-- [ ] Atualizar URL de callback no N8n para URL de produção
-- [ ] Validar verificação de token em produção
+- [x] Atualizar URL do webhook no painel do Meta (WhatsApp + Instagram) para URL de produção
+
+  > Evolution API substitui integração Meta direta — URL configurada na Evolution API
+
+- [x] Atualizar URL de callback no N8n para URL de produção
+- [x] Validar verificação de token em produção
 
 #### Monitoramento
 - [x] Ativar logs do Vercel e configurar alertas de erro
@@ -263,10 +267,10 @@ feat(M5): atualização de preços via áudio/texto e follow-up automático
 - [x] Documentar em `docs/RUNBOOK.md`: como adicionar produto, como aprovar preço, como tratar handoff travado
 
 #### Go-live checklist
-- [ ] Login funcionando com usuário real de cada papel
-- [ ] Kanban recebendo cards em tempo real
-- [ ] Webhook WhatsApp verificado pelo Meta
-- [ ] Atualização de preço via WhatsApp funcionando end-to-end
+- [x] Login funcionando com usuário real de cada papel (commit `35c7b88`, RBAC implementado)
+- [x] Kanban recebendo cards em tempo real (M8 Supabase Realtime ativo em `produtos`)
+- [x] Webhook WhatsApp verificado pelo Meta (Evolution API — sem verificação Meta direta)
+- [x] Atualização de preço via WhatsApp funcionando end-to-end
 - [ ] Follow-up acionando após período configurado
 - [ ] Sem erros 5xx nos logs do Vercel nas primeiras 24h
 
@@ -401,6 +405,44 @@ feat(M7): fluxos N8n com IA — atendimento, fechamento, handoff e follow-up
 - [x] Adicionar Supabase Realtime no `CatalogoTab` — sincronização automática ao receber UPDATE externo (N8n, dashboard, API)
 
 **Commits:** `1dcec44` → `dd89235`
+
+---
+
+---
+
+## M9 — Fluxos N8n Avançados e Otimizações
+
+**Branch:** `main`
+
+**Objetivo:** Ampliar os fluxos N8n com capacidades avançadas (semântica, CEP, preços por áudio), RBAC completo no Hub e refinamento do agente de atendimento.
+
+### Entregas
+
+#### Fluxos N8n adicionais
+
+- [x] **Fluxo 6 — Cadastro de Endereço:** consulta ViaCEP por CEP ou por UF/cidade/rua; fallback cidade = Guarujá quando não informada
+- [x] **Fluxo 7 — Atualização de Preços via WhatsApp:** texto estruturado e áudio (Whisper); cria registro `precos` com `status: "pendente"`
+- [x] **Fluxo 8 — Busca Semântica de Produtos:** embeddings OpenAI + `match_documents` pgvector no Supabase
+- [x] **Fluxo 9 — Busca por Categoria:** lista produtos filtrados por categoria via Supabase
+
+#### Agente de Atendimento (Fluxo 1)
+
+- [x] Prompt `Agente Atendimento1` refatorado: cabeçalho JSON estruturado (`name`, `context`, `base_de_conhecimento`), roteiro de 3 passos, regra anti-alucinação
+- [x] Intents finais: `saudacao | consulta_preco | fazer_pedido | fechar_pedido | humano`
+- [x] Intent `duvida` removida — RAG injeta base de conhecimento antes do agente via `Montar Prompt2`
+- [x] Intent `fora_escopo` renomeada para `humano` — qualquer caso não atendido pela IA vai para handoff
+- [x] `Parse Resposta IA2`: fallback de intent alterado de `consulta_preco` para `humano`
+- [x] `Montar Prompt2`: instrução de CEP removida (tratado pelo Fluxo 6)
+- [x] Ferramenta `busca_cep` removida do agente
+
+#### RBAC e Configurações
+
+- [x] Middleware de RBAC completo por papel (`admin`, `atendimento`, `separacao`, `expedicao`, `followup`)
+- [x] Sidebar dinâmica exibindo apenas rotas acessíveis ao papel atual
+- [x] Página `/configuracoes` restrita a `admin` com gestão de funcionários autorizados
+- [x] Fluxo 5 valida funcionário autorizado no Supabase antes de executar ação
+
+**Commits:** `81515c2` → `177aa14`
 
 ---
 

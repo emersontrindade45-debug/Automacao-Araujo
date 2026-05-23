@@ -66,3 +66,23 @@ export interface HandoffPayload {
   itens_pedido: ItemPedido[];
   proxima_acao: string;
 }
+
+export interface LogEvento {
+  id: string;
+  tipo: string;
+  payload: {
+    cliente_id?: string;
+    proxima_acao?: string;
+    handoff?: {
+      nome?: string;
+      telefone?: string;
+      canal_origem?: string;
+      itens_pedido?: ItemPedido[];
+      forma_pagamento?: string;
+      endereco_entrega?: string;
+      ultimas_mensagens?: string[];
+      proxima_acao?: string;
+    };
+  };
+  criado_em: string;
+}

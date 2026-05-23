@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Cliente } from "@/lib/types";
 import { EtapaBadge, CanalBadge, etapaLabels } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
@@ -15,7 +16,7 @@ const ETAPAS: Etapa[] = [
 interface KanbanPanelProps {
   cliente: Cliente;
   onClose: () => void;
-  onMoverEtapa: (clienteId: string, novaEtapa: Etapa) => void;
+  onMoverEtapa: (clienteId: string, novaEtapa: Etapa, valorFinal?: number) => void;
 }
 
 function formatData(iso: string) {
@@ -34,6 +35,16 @@ export function KanbanPanel({ cliente, onClose, onMoverEtapa }: KanbanPanelProps
   const historico = mockHistorico[cliente.id] ?? [];
   const etapaIndex = ETAPAS.indexOf(cliente.etapa_atual);
   const proximaEtapa = etapaIndex < ETAPAS.length - 1 ? ETAPAS[etapaIndex + 1] : null;
+  const precisaValorFinal = cliente.etapa_atual === "separacao";
+  const [valorFinal, setValorFinal] = useState("");
+  const valorFinalParsed = parseFloat(valorFinal);
+  const valorFinalValido = !isNaN(valorFinalParsed) && valorFinalParsed > 0;
+
+  function handleAvancar() {
+    if (!proximaEtapa) return;
+    if (precisaValorFinal && !valorFinalValido) return;
+    onMoverEtapa(cliente.id, proximaEtapa, precisaValorFinal ? valorFinalParsed : undefined);
+  }
 
   return (
     <>
@@ -104,12 +115,28 @@ export function KanbanPanel({ cliente, onClose, onMoverEtapa }: KanbanPanelProps
         </div>
 
         {/* Actions */}
-        <div className="px-5 py-4 border-t border-border space-y-2 shrink-0">
+        <div className="px-5 py-4 border-t border-border space-y-3 shrink-0">
+          {precisaValorFinal && proximaEtapa && (
+            <div>
+              <p className="text-xs font-medium text-foreground mb-1">Valor final após pesagem</p>
+              <p className="text-xs text-muted mb-2">Informe o valor real antes de avançar para Em Rota.</p>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Ex: 134.50"
+                value={valorFinal}
+                onChange={(e) => setValorFinal(e.target.value)}
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-brand/40"
+              />
+            </div>
+          )}
           {proximaEtapa && (
             <Button
               variant="primary"
               className="w-full"
-              onClick={() => onMoverEtapa(cliente.id, proximaEtapa)}
+              onClick={handleAvancar}
+              disabled={precisaValorFinal && !valorFinalValido}
             >
               Avançar para {etapaLabels[proximaEtapa]}
             </Button>

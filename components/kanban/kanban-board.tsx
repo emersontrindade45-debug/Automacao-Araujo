@@ -73,7 +73,7 @@ export function KanbanBoard({ initialClientes }: KanbanBoardProps) {
     moverCliente(clienteId, toEtapa);
   }
 
-  function moverCliente(clienteId: string, novaEtapa: Etapa) {
+  function moverCliente(clienteId: string, novaEtapa: Etapa, valorFinal?: number) {
     const now = new Date().toISOString();
     setClientes((prev) =>
       prev.map((c) => c.id === clienteId ? { ...c, etapa_atual: novaEtapa, atualizado_em: now } : c)
@@ -81,7 +81,7 @@ export function KanbanBoard({ initialClientes }: KanbanBoardProps) {
     setSelecionado((prev) =>
       prev?.id === clienteId ? { ...prev, etapa_atual: novaEtapa, atualizado_em: now } : prev
     );
-    startTransition(() => moverEtapaAction(clienteId, novaEtapa));
+    startTransition(() => moverEtapaAction(clienteId, novaEtapa, valorFinal));
   }
 
   return (

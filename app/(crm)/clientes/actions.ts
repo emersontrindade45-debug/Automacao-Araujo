@@ -64,7 +64,7 @@ async function notificarEtapa(clienteId: string, etapa: Etapa, valorFinal?: numb
 export async function getStatusIAAction(telefone: string): Promise<"ativa" | "pausada"> {
   const supabase = await createClient();
   const { data } = await supabase
-    .from("dados_cliente")
+    .from("clientes")
     .select("atendimento_ia")
     .eq("telefone", telefone)
     .single();
@@ -76,7 +76,7 @@ export async function getStatusIAAction(telefone: string): Promise<"ativa" | "pa
 export async function pausarIAAction(telefone: string) {
   const supabase = await createClient();
   await supabase
-    .from("dados_cliente")
+    .from("clientes")
     .update({ atendimento_ia: "pause" })
     .eq("telefone", telefone);
 }
@@ -84,7 +84,7 @@ export async function pausarIAAction(telefone: string) {
 export async function reativarIAAction(telefone: string) {
   const supabase = await createClient();
   await supabase
-    .from("dados_cliente")
-    .update({ atendimento_ia: "reativada" })
+    .from("clientes")
+    .update({ atendimento_ia: "ativa" })
     .eq("telefone", telefone);
 }

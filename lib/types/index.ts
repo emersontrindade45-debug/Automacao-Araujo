@@ -27,6 +27,8 @@ export interface Cliente {
   endereco_entrega?: string | null;
 }
 
+export type TipoProduto = "produto" | "kit" | "oferta";
+
 export interface Produto {
   id: string;
   nome: string;
@@ -35,6 +37,11 @@ export interface Produto {
   unidade: string;
   ativo: boolean;
   criado_em: string;
+  tipo: TipoProduto;
+  descricao: string | null;
+  validade: string | null;
+  categoria: string | null;
+  disponivel: boolean;
 }
 
 export interface ItemPedido {

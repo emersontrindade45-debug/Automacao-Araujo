@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Produto } from "@/lib/types";
+import type { Produto, TipoProduto } from "@/lib/types";
 
 export async function getProdutos() {
   const supabase = await createClient();
@@ -55,6 +55,64 @@ export interface LinhaPlanilha {
   unidade: string;
   preco_atual: number;
   estoque_atual: number;
+}
+
+export async function getOfertasEKits() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("produtos")
+    .select("id, nome, preco_atual, unidade, tipo, descricao, validade, categoria, ativo, disponivel, criado_em")
+    .in("tipo", ["oferta", "kit"])
+    .order("tipo")
+    .order("nome");
+
+  if (error) throw error;
+  return data as Produto[];
+}
+
+export interface OfertaKitPayload {
+  nome: string;
+  preco_atual: number;
+  unidade: string;
+  tipo: TipoProduto;
+  descricao: string | null;
+  validade: string | null;
+  categoria: string;
+  ativo: boolean;
+  disponivel: boolean;
+}
+
+export async function criarOfertaKit(payload: OfertaKitPayload) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("produtos")
+    .insert({ ...payload, estoque_atual: 0 })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Produto;
+}
+
+export async function atualizarOfertaKit(id: string, payload: Partial<OfertaKitPayload>) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("produtos")
+    .update(payload)
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+export async function deletarOfertaKit(id: string) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("produtos")
+    .delete()
+    .eq("id", id)
+    .in("tipo", ["oferta", "kit"]);
+
+  if (error) throw error;
 }
 
 export async function upsertProdutosEmLote(linhas: LinhaPlanilha[]) {

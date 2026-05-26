@@ -65,3 +65,4 @@ n8n/workflows/fluxo*_upload.json
 
 # Scripts de patch n8n (contêm chaves hardcoded)
 n8n/patch_*.py
+n8n/scripts/deploy-*.js

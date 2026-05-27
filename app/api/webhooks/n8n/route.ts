@@ -10,6 +10,7 @@ type HandoffTipo =
 
 interface N8nHandoffBody {
   tipo: HandoffTipo;
+  rascunho_id?: string | null;
   handoff: HandoffPayload & {
     endereco_entrega?: string;
     forma_pagamento?: string;
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { tipo, handoff, atendente_email } = body;
+  const { tipo, rascunho_id, handoff, atendente_email } = body;
   const supabase = createAdminClient();
   let pedidoCriado: { id: string; numero_pedido: number } | null = null;
 
@@ -63,46 +64,33 @@ export async function POST(request: NextRequest) {
       0
     );
 
-    // Busca rascunho existente (status fechamento) para atualizar em vez de criar novo
-    const { data: rascunho } = await supabase
-      .from("pedidos")
-      .select("id, numero_pedido")
-      .eq("cliente_id", cliente.id)
-      .eq("status", "fechamento")
-      .order("criado_em", { ascending: false })
-      .limit(1)
-      .single();
+    const pedidoData = {
+      itens: handoff.itens_pedido,
+      status: "pedido_gerado" as const,
+      endereco_entrega: handoff.endereco_entrega ?? "",
+      forma_pagamento: handoff.forma_pagamento ?? "",
+      total,
+    };
 
-    if (rascunho) {
+    // Se o n8n enviou o ID do rascunho, atualiza diretamente — sem busca extra
+    if (rascunho_id) {
       const { data: pedido, error: pedidoError } = await supabase
         .from("pedidos")
-        .update({
-          itens: handoff.itens_pedido,
-          status: "pedido_gerado",
-          endereco_entrega: handoff.endereco_entrega ?? "",
-          forma_pagamento: handoff.forma_pagamento ?? "",
-          total,
-        })
-        .eq("id", rascunho.id)
+        .update(pedidoData)
+        .eq("id", rascunho_id)
         .select("id, numero_pedido")
         .single();
 
       if (pedidoError) {
-        console.error("[webhook/n8n] atualizar pedido:", pedidoError);
+        console.error("[webhook/n8n] atualizar rascunho:", pedidoError);
       } else {
         pedidoCriado = pedido;
       }
     } else {
+      // Fallback: cria novo pedido
       const { data: pedido, error: pedidoError } = await supabase
         .from("pedidos")
-        .insert({
-          cliente_id: cliente.id,
-          itens: handoff.itens_pedido,
-          status: "pedido_gerado",
-          endereco_entrega: handoff.endereco_entrega ?? "",
-          forma_pagamento: handoff.forma_pagamento ?? "",
-          total,
-        })
+        .insert({ cliente_id: cliente.id, ...pedidoData })
         .select("id, numero_pedido")
         .single();
 

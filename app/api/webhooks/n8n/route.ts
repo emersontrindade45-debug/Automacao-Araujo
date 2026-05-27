@@ -56,30 +56,61 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
 
-  // Criar pedido quando confirmado
+  // Criar ou atualizar pedido quando confirmado
   if (tipo === "pedido_confirmado" && handoff.itens_pedido.length > 0) {
     const total = handoff.itens_pedido.reduce(
       (acc, item) => acc + item.preco_unitario * item.quantidade,
       0
     );
 
-    const { data: pedido, error: pedidoError } = await supabase
+    // Busca rascunho existente (status fechamento) para atualizar em vez de criar novo
+    const { data: rascunho } = await supabase
       .from("pedidos")
-      .insert({
-        cliente_id: cliente.id,
-        itens: handoff.itens_pedido,
-        status: "pedido_gerado",
-        endereco_entrega: handoff.endereco_entrega ?? "",
-        forma_pagamento: handoff.forma_pagamento ?? "",
-        total,
-      })
       .select("id, numero_pedido")
+      .eq("cliente_id", cliente.id)
+      .eq("status", "fechamento")
+      .order("criado_em", { ascending: false })
+      .limit(1)
       .single();
 
-    if (pedidoError) {
-      console.error("[webhook/n8n] criar pedido:", pedidoError);
+    if (rascunho) {
+      const { data: pedido, error: pedidoError } = await supabase
+        .from("pedidos")
+        .update({
+          itens: handoff.itens_pedido,
+          status: "pedido_gerado",
+          endereco_entrega: handoff.endereco_entrega ?? "",
+          forma_pagamento: handoff.forma_pagamento ?? "",
+          total,
+        })
+        .eq("id", rascunho.id)
+        .select("id, numero_pedido")
+        .single();
+
+      if (pedidoError) {
+        console.error("[webhook/n8n] atualizar pedido:", pedidoError);
+      } else {
+        pedidoCriado = pedido;
+      }
     } else {
-      pedidoCriado = pedido;
+      const { data: pedido, error: pedidoError } = await supabase
+        .from("pedidos")
+        .insert({
+          cliente_id: cliente.id,
+          itens: handoff.itens_pedido,
+          status: "pedido_gerado",
+          endereco_entrega: handoff.endereco_entrega ?? "",
+          forma_pagamento: handoff.forma_pagamento ?? "",
+          total,
+        })
+        .select("id, numero_pedido")
+        .single();
+
+      if (pedidoError) {
+        console.error("[webhook/n8n] criar pedido:", pedidoError);
+      } else {
+        pedidoCriado = pedido;
+      }
     }
   }
 

@@ -11,7 +11,7 @@ interface PedidosListProps {
 }
 
 const STATUS_PEDIDO: Etapa[] = [
-  "fechamento", "pedido_gerado", "separacao", "em_rota", "pos_venda",
+  "pedido_gerado", "separacao", "em_rota", "pos_venda",
 ];
 
 export function PedidosList({ pedidos, clienteNomes }: PedidosListProps) {

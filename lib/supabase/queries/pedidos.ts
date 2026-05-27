@@ -6,6 +6,7 @@ export async function getPedidos() {
   const { data, error } = await supabase
     .from("pedidos")
     .select("*, clientes(nome, telefone, canal_origem)")
+    .neq("status", "fechamento")
     .order("criado_em", { ascending: false });
 
   if (error) throw error;

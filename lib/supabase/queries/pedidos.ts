@@ -9,7 +9,15 @@ export async function getPedidos() {
     .order("criado_em", { ascending: false });
 
   if (error) throw error;
-  return data as (Pedido & { clientes: { nome: string; telefone: string; canal_origem: string } })[];
+  const rows = data as (Pedido & { clientes: { nome: string; telefone: string; canal_origem: string } })[];
+  return rows.map((p) => ({
+    ...p,
+    itens: Array.isArray(p.itens)
+      ? p.itens
+      : typeof p.itens === "string"
+        ? (() => { try { return JSON.parse(p.itens as unknown as string); } catch { return []; } })()
+        : [],
+  }));
 }
 
 export async function getPedidoById(id: string) {
@@ -21,7 +29,15 @@ export async function getPedidoById(id: string) {
     .single();
 
   if (error) throw error;
-  return data as Pedido & { clientes: { nome: string; telefone: string; canal_origem: string } };
+  const p = data as Pedido & { clientes: { nome: string; telefone: string; canal_origem: string } };
+  return {
+    ...p,
+    itens: Array.isArray(p.itens)
+      ? p.itens
+      : typeof p.itens === "string"
+        ? (() => { try { return JSON.parse(p.itens as unknown as string); } catch { return []; } })()
+        : [],
+  };
 }
 
 export async function getPedidosByCliente(clienteId: string) {

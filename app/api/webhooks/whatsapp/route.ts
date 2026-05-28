@@ -41,7 +41,18 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAdminClient();
 
-  // Upsert cliente — mantém etapa se já existir
+  // Verificar se cliente já existe e qual era sua etapa anterior
+  const ETAPAS_RETORNANTE = ["entregue", "cancelado"] as const;
+  const { data: clienteExistente } = await supabase
+    .from("clientes")
+    .select("etapa_atual")
+    .eq("telefone", telefone)
+    .single();
+
+  const etapaAnterior = clienteExistente?.etapa_atual ?? null;
+  const isRetornante = ETAPAS_RETORNANTE.includes(etapaAnterior as typeof ETAPAS_RETORNANTE[number]);
+
+  // Upsert cliente — preserva etapa se for retornante, senão move para atendimento
   const { data: cliente, error: upsertError } = await supabase
     .from("clientes")
     .upsert(
@@ -49,7 +60,7 @@ export async function POST(request: NextRequest) {
         nome,
         telefone,
         canal_origem: "whatsapp",
-        etapa_atual: "atendimento",
+        etapa_atual: isRetornante ? etapaAnterior! : "atendimento",
       },
       { onConflict: "telefone", ignoreDuplicates: false }
     )
@@ -87,6 +98,8 @@ export async function POST(request: NextRequest) {
     instance: payload.instance,
     message_id: data.key.id,
     timestamp: data.messageTimestamp,
+    is_retornante: isRetornante,
+    etapa_anterior: isRetornante ? etapaAnterior : null,
   });
 
   return NextResponse.json({ ok: true });

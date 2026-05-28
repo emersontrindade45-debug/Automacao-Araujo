@@ -11,7 +11,7 @@ import type { Etapa } from "@/lib/types";
 
 const ETAPAS: Etapa[] = [
   "novo", "atendimento", "fechamento", "pedido_gerado",
-  "separacao", "em_rota", "pos_venda", "follow_up", "marketing",
+  "separacao", "em_rota", "entregue", "cancelado", "pos_venda", "follow_up", "marketing",
 ];
 
 interface KanbanPanelProps {
@@ -35,7 +35,8 @@ function formatTelefone(tel: string) {
 export function KanbanPanel({ cliente, onClose, onMoverEtapa }: KanbanPanelProps) {
   const historico = mockHistorico[cliente.id] ?? [];
   const etapaIndex = ETAPAS.indexOf(cliente.etapa_atual);
-  const proximaEtapa = etapaIndex < ETAPAS.length - 1 ? ETAPAS[etapaIndex + 1] : null;
+  const proximaEtapaCandidata = etapaIndex < ETAPAS.length - 1 ? ETAPAS[etapaIndex + 1] : null;
+  const proximaEtapa = proximaEtapaCandidata === "cancelado" ? null : proximaEtapaCandidata;
   const precisaValorFinal = cliente.etapa_atual === "separacao";
   const [valorFinal, setValorFinal] = useState("");
   const valorFinalParsed = parseFloat(valorFinal);

@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { Etapa } from "@/lib/types";
 
-const ETAPAS_COM_NOTIFICACAO: Etapa[] = ["pedido_gerado", "separacao", "em_rota", "entregue", "pos_venda"];
+const ETAPAS_COM_NOTIFICACAO: Etapa[] = ["pedido_gerado", "separacao", "em_rota", "entregue", "cancelado", "pos_venda"];
 
 const ETAPAS_COM_PEDIDO: Etapa[] = ["pedido_gerado", "separacao", "em_rota", "entregue", "pos_venda"];
 

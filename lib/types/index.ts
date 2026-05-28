@@ -10,6 +10,7 @@ export type Etapa =
   | "separacao"
   | "em_rota"
   | "entregue"
+  | "cancelado"
   | "pos_venda"
   | "follow_up"
   | "marketing";

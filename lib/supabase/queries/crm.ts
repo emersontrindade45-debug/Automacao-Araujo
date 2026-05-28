@@ -124,7 +124,7 @@ export async function getCrmPipeline(): Promise<PipelineEtapa[]> {
 
   const ordem: Etapa[] = [
     "novo", "atendimento", "fechamento", "pedido_gerado",
-    "separacao", "em_rota", "pos_venda", "follow_up", "marketing",
+    "separacao", "em_rota", "entregue", "cancelado", "pos_venda", "follow_up", "marketing",
   ];
 
   return ordem.map((etapa) => ({ etapa, count: contagem.get(etapa) ?? 0 }));

@@ -36,6 +36,8 @@ const variantClasses: Record<string, string> = {
     "bg-orange-50 text-orange-600 border border-orange-200 dark:bg-orange-950 dark:text-orange-400 dark:border-orange-800",
   entregue:
     "bg-teal-50 text-teal-600 border border-teal-200 dark:bg-teal-950 dark:text-teal-400 dark:border-teal-800",
+  cancelado:
+    "bg-red-50 text-red-600 border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800",
   pos_venda:
     "bg-cyan-50 text-cyan-600 border border-cyan-200 dark:bg-cyan-950 dark:text-cyan-400 dark:border-cyan-800",
   follow_up:
@@ -60,6 +62,7 @@ const etapaLabels: Record<Etapa, string> = {
   separacao: "Separação",
   em_rota: "Em Rota",
   entregue: "Entregue",
+  cancelado: "Cancelado",
   pos_venda: "Pós-venda",
   follow_up: "Follow-up",
   marketing: "Marketing",

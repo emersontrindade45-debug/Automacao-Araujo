@@ -7,6 +7,8 @@ const ETAPA_CONFIG: Record<string, { label: string; cor: string }> = {
   pedido_gerado: { label: "Pedido gerado", cor: "#10b981" },
   separacao:     { label: "Separação",     cor: "#8b5cf6" },
   em_rota:       { label: "Em rota",       cor: "#f97316" },
+  entregue:      { label: "Entregue",      cor: "#22c55e" },
+  cancelado:     { label: "Cancelado",     cor: "#ef4444" },
   pos_venda:     { label: "Pós-venda",     cor: "#06b6d4" },
   follow_up:     { label: "Follow-up",     cor: "#ec4899" },
   marketing:     { label: "Marketing",     cor: "#84cc16" },

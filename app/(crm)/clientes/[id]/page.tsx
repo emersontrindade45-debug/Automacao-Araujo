@@ -159,6 +159,17 @@ export default async function ClienteDetalhe({ params }: Props) {
         etapas={ETAPAS}
       />
 
+      {cliente.resumo_ultimo_atendimento && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Último atendimento</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-foreground leading-relaxed">{cliente.resumo_ultimo_atendimento}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {pedidos.length > 0 && (
         <Card>
           <CardHeader>

@@ -26,6 +26,7 @@ export interface Cliente {
   criado_em: string;
   atualizado_em: string;
   endereco_entrega?: string | null;
+  resumo_ultimo_atendimento?: string | null;
 }
 
 export type TipoProduto = "produto" | "kit" | "oferta";

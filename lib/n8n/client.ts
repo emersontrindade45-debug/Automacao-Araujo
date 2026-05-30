@@ -14,7 +14,7 @@ export async function dispararWebhookN8n<T>(
 ): Promise<void> {
   const url = WEBHOOK_URLS[nome];
   if (!url) {
-    console.warn(`[n8n] URL não configurada para webhook: ${nome}`);
+    console.error(`[n8n] URL não configurada para webhook: ${nome}`);
     return;
   }
 

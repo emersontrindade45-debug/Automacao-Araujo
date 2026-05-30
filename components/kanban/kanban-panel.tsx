@@ -114,6 +114,14 @@ export function KanbanPanel({ cliente, onClose, onMoverEtapa }: KanbanPanelProps
             </div>
           </div>
 
+          {/* Resumo do último atendimento */}
+          {cliente.resumo_ultimo_atendimento && (
+            <div className="rounded-lg bg-brand/5 border border-brand/20 px-4 py-3">
+              <p className="text-xs text-subtle uppercase tracking-wide mb-1">Último atendimento</p>
+              <p className="text-sm text-foreground leading-relaxed">{cliente.resumo_ultimo_atendimento}</p>
+            </div>
+          )}
+
           {/* Histórico */}
           <div>
             <p className="text-xs text-subtle uppercase tracking-wide mb-3">Histórico</p>

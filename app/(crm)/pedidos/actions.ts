@@ -18,7 +18,9 @@ export async function confirmarPedidoAction(pedidoId: string, status: Etapa, val
   revalidatePath(`/pedidos/${pedidoId}`);
 
   if (ETAPAS_COM_NOTIFICACAO.includes(status)) {
-    notificarEtapaPedido(pedidoId, status, valorFinal).catch(() => {});
+    notificarEtapaPedido(pedidoId, status, valorFinal).catch((err) => {
+      console.error("[n8n] Falha ao notificar etapa:", err);
+    });
   }
 }
 

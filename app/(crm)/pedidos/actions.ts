@@ -1,6 +1,7 @@
 "use server";
 
 import { getPedidoById, updateStatusPedido, updateValorFinal } from "@/lib/supabase/queries/pedidos";
+import { updateEtapaCliente } from "@/lib/supabase/queries/clientes";
 import { dispararWebhookN8n } from "@/lib/n8n/client";
 import { revalidatePath } from "next/cache";
 import type { Etapa } from "@/lib/types";
@@ -14,8 +15,16 @@ export async function confirmarPedidoAction(pedidoId: string, status: Etapa, val
     await updateValorFinal(pedidoId, valorFinal);
   }
 
+  // Sincroniza etapa do cliente com o status do pedido
+  const pedido = await getPedidoById(pedidoId);
+  const clienteId = pedido.cliente_id;
+  await updateEtapaCliente(clienteId, status);
+
   revalidatePath("/pedidos");
   revalidatePath(`/pedidos/${pedidoId}`);
+  revalidatePath("/kanban");
+  revalidatePath("/clientes");
+  revalidatePath(`/clientes/${clienteId}`);
 
   if (ETAPAS_COM_NOTIFICACAO.includes(status)) {
     notificarEtapaPedido(pedidoId, status, valorFinal).catch((err) => {

@@ -75,10 +75,32 @@ export async function getStatusIAAction(telefone: string): Promise<"ativa" | "pa
 
 export async function pausarIAAction(telefone: string) {
   const supabase = await createClient();
+
+  const { data: cliente } = await supabase
+    .from("clientes")
+    .select("nome, canal_origem, etapa_atual")
+    .eq("telefone", telefone)
+    .single();
+
   await supabase
     .from("clientes")
     .update({ atendimento_ia: "pause" })
     .eq("telefone", telefone);
+
+  if (cliente) {
+    dispararWebhookN8n("handoff", {
+      tipo: "ambiguo",
+      handoff: {
+        nome: cliente.nome,
+        telefone,
+        canal_origem: cliente.canal_origem,
+        etapa: cliente.etapa_atual,
+        ultimas_mensagens: [],
+        itens_pedido: [],
+        proxima_acao: "Handoff manual pelo operador no Hub",
+      },
+    }).catch(() => {});
+  }
 }
 
 export async function reativarIAAction(telefone: string) {

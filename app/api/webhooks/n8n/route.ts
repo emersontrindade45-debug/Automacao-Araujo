@@ -37,6 +37,8 @@ export async function POST(request: NextRequest) {
   const supabase = createAdminClient();
   let pedidoCriado: { id: string; numero_pedido: number } | null = null;
 
+  const HANDOFFS_PAUSAR_IA: HandoffTipo[] = ["ambiguo", "sem_resposta"];
+
   // Upsert cliente
   const { data: cliente, error: upsertError } = await supabase
     .from("clientes")
@@ -46,6 +48,7 @@ export async function POST(request: NextRequest) {
         telefone: handoff.telefone,
         canal_origem: handoff.canal_origem,
         etapa_atual: resolverEtapa(tipo),
+        ...(HANDOFFS_PAUSAR_IA.includes(tipo) ? { atendimento_ia: "pause" } : {}),
       },
       { onConflict: "telefone", ignoreDuplicates: false }
     )

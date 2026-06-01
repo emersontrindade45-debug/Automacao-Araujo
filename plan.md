@@ -30,6 +30,15 @@
 - [x] RAG (Fluxo 1): Agente RAG injeta base de conhecimento antes de `Agente Atendimento1` — intent `duvida` removida
 - [x] CEP removido do agente — tratado exclusivamente pelo Fluxo 6
 
+## M10 — Ajustes e Validações (2026-06-01)
+
+- [x] Planilha modelo de importação atualizada com colunas `categoria` e `validade` (alinhada à tabela `produtos` no Supabase)
+- [x] `LinhaPlanilha` e `upsertProdutosEmLote` atualizados para persistir `categoria` e `validade` no banco
+- [x] Tabela de prévia do modal de importação exibe as novas colunas
+- [x] Colunas opcionais — planilhas sem `categoria`/`validade` continuam funcionando normalmente
+
+---
+
 ## M9 — Fluxos N8n Avançados e Otimizações (2026-05-23)
 
 - [x] Fluxo 6: CEP com fallback cidade Guarujá — `Consulta CEP2` e `Consultar ViaCep`

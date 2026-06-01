@@ -55,6 +55,8 @@ export interface LinhaPlanilha {
   unidade: string;
   preco_atual: number;
   estoque_atual: number;
+  categoria: string | null;
+  validade: string | null;
 }
 
 export async function getOfertasEKits() {
@@ -118,11 +120,19 @@ export async function deletarOfertaKit(id: string) {
 export async function upsertProdutosEmLote(linhas: LinhaPlanilha[]) {
   const supabase = createAdminClient();
   await Promise.all(
-    linhas.map(({ nome, unidade, preco_atual, estoque_atual }) =>
+    linhas.map(({ nome, unidade, preco_atual, estoque_atual, categoria, validade }) =>
       supabase
         .from("produtos")
         .upsert(
-          { nome, unidade, preco_atual, estoque_atual, ativo: true },
+          {
+            nome,
+            unidade,
+            preco_atual,
+            estoque_atual,
+            ativo: true,
+            categoria: categoria || null,
+            validade: validade || null,
+          },
           { onConflict: "nome", ignoreDuplicates: false }
         )
         .throwOnError()

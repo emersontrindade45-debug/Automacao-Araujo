@@ -5,16 +5,16 @@
       "parameters": {
         "workflowInputs": {
           "values": [
-            {
-              "name": "termo"
-            }
+            { "name": "termo" },
+            { "name": "telefone" },
+            { "name": "nome_cliente" }
           ]
         }
       },
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [240, 300],
-      "id": "f8-trigger",
+      "position": [-16, 80],
+      "id": "2ce015a8-01c9-4bcf-b894-eced733cf02e",
       "name": "Receber Termo",
       "alwaysOutputData": true
     },
@@ -31,8 +31,8 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [460, 300],
-      "id": "f8-embedding",
+      "position": [224, 80],
+      "id": "52475e26-f1bd-495b-aee0-56b2c99e93e1",
       "name": "Gerar Embedding",
       "credentials": {
         "openAiApi": {
@@ -58,13 +58,13 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"query_embedding\": {{ JSON.stringify($json.data[0].embedding) }},\n  \"match_count\": 5,\n  \"match_threshold\": 0.3\n}",
+        "jsonBody": "={\n  \"query_embedding\": {{ JSON.stringify($json.data[0].embedding) }},\n  \"match_count\": 5,\n  \"match_threshold\": 0.6\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [680, 300],
-      "id": "f8-match",
+      "position": [432, 80],
+      "id": "4e0c707b-3544-4702-b64d-d50dfefe890e",
       "name": "Buscar Produtos Similares",
       "credentials": {
         "supabaseApi": {
@@ -75,29 +75,149 @@
     },
     {
       "parameters": {
-        "jsCode": "const termo = $('Receber Termo').first().json.termo || '';\nconst resultados = $input.first().json;\n\nconst lista = Array.isArray(resultados) ? resultados : [];\n\nif (lista.length === 0) {\n  return [{\n    json: {\n      resultado: `Nenhum produto encontrado para \"${termo}\". Tente um nome diferente ou consulte por categoria.`,\n      produtos: []\n    }\n  }];\n}\n\nconst formatarPreco = (v) =>\n  Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });\n\nconst linhas = lista.map((p) => {\n  const disponivel = Number(p.estoque_atual || p.estoque || 0) > 0;\n  const status = disponivel ? 'disponível' : 'sem estoque';\n  const preco = formatarPreco(p.preco_atual || p.preco || 0);\n  const unidade = p.unidade || 'un';\n  return `- ${p.nome}: ${preco}/${unidade} (${status})`;\n});\n\nreturn [{\n  json: {\n    resultado: linhas.join('\\n'),\n    produtos: lista.map((p) => ({\n      produto_id: p.id || '',\n      nome: p.nome || '',\n      preco_unitario: Number(p.preco_atual || p.preco || 0),\n      unidade: p.unidade || 'un',\n      estoque: Number(p.estoque_atual || p.estoque || 0)\n    }))\n  }\n}];"
+        "jsCode": "const termo = $('Receber Termo').first().json.termo || '';\n\n// match_produtos já filtra ativo=true no banco (ver migration 20260602120000).\n// O filtro abaixo é uma segunda camada de segurança caso o campo ativo venha na resposta.\nconst lista = $input.all()\n  .map(item => item.json)\n  .filter(p => p.ativo !== false);\n\nif (lista.length === 0) {\n  return [{\n    json: {\n      resultado: `Nenhum produto disponível encontrado para \"${termo}\". Tente um nome diferente ou consulte por categoria.`,\n      produtos: []\n    }\n  }];\n}\n\nconst formatarPreco = (v) =>\n  Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });\n\nconst linhas = lista.map((p) => {\n  // ativo=true garantido pela função SQL; status baseado no estoque\n  const temEstoque = Number(p.estoque_atual || p.estoque || 0) > 0;\n  const status = temEstoque ? 'disponível' : 'sem estoque';\n  const preco = formatarPreco(p.preco_atual || p.preco || 0);\n  const unidade = p.unidade || 'un';\n  return `- ${p.nome}: ${preco}/${unidade} (${status})`;\n});\n\nconst nome = $('Receber Termo').first().json.nome_cliente || '';\n\nconst gatilhos = [\n  nome ? `${nome}, esse produto ta saindo bastante hoje. Quer garantir o seu antes de acabar?` : `Esse produto ta saindo bastante hoje. Quer garantir o seu antes de acabar?`,\n  nome ? `${nome}, posso separar agora para voce? E so me dizer a quantidade!` : `Posso separar agora para voce? E so me dizer a quantidade!`,\n  nome ? `${nome}, varios clientes que levaram esse aproveitaram para fechar o pedido completo. Quer que eu monte um para voce?` : `Varios clientes que levaram esse aproveitaram para fechar o pedido completo. Quer que eu monte um para voce?`,\n  nome ? `${nome}, esse e um dos favoritos aqui da loja. Me fala a quantidade que voce precisa!` : `Esse e um dos favoritos aqui da loja. Me fala a quantidade que voce precisa!`,\n  nome ? `${nome}, aproveita que temos em estoque agora. Quantos quilos voce quer separar?` : `Aproveita que temos em estoque agora. Quantos quilos voce quer separar?`,\n  nome ? `${nome}, posso deixar separado para voce ainda hoje. Qual a quantidade?` : `Posso deixar separado para voce ainda hoje. Qual a quantidade?`,\n  nome ? `${nome}, quem experimenta esse produto sempre volta a pedir. Quer garantir o seu?` : `Quem experimenta esse produto sempre volta a pedir. Quer garantir o seu?`,\n  nome ? `${nome}, e so confirmar a quantidade que ja separo para voce!` : `E so confirmar a quantidade que ja separo para voce!`,\n  nome ? `${nome}, nossos clientes adoram esse produto. Posso separar uma quantidade para voce?` : `Nossos clientes adoram esse produto. Posso separar uma quantidade para voce?`,\n  nome ? `${nome}, nao deixa para depois nao! Me diz quanto voce precisa e eu ja separo.` : `Nao deixa para depois nao! Me diz quanto voce precisa e eu ja separo.`\n];\n\nconst gatilho = gatilhos[Math.floor(Math.random() * gatilhos.length)];\n\nreturn [{\n  json: {\n    resultado: linhas.join('\\n') + `\\n\\n${gatilho}`,\n    produtos: lista.map((p) => ({\n      produto_id: p.id || '',\n      nome: p.nome || '',\n      preco_unitario: Number(p.preco_atual || p.preco || 0),\n      unidade: p.unidade || 'un',\n      estoque: Number(p.estoque_atual || p.estoque || 0)\n    }))\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 300],
-      "id": "f8-formatar",
+      "position": [672, 80],
+      "id": "c0c8fdcb-bad0-4c82-a305-44c80493712d",
       "name": "Formatar Resultado"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }}",
+        "options": {
+          "systemMessage": "=Você é vendedor especialista do Mercado Araujo no WhatsApp.\n\nOBJETIVO:\nTransformar os dados estruturados em uma resposta natural, humana e persuasiva.\n\nREGRAS:\n- Nunca invente preços\n- Nunca invente produtos\n- Use o nome do cliente quando existir\n- Seja natural e curto\n- Estimule continuidade da conversa\n- Se houver estoque alto, gere urgência leve\n- Sugira complemento quando fizer sentido\n- Finalize sempre incentivando o pedido\n- Produtos sem estoque: mencione que pode avisar quando chegar\n\nDADOS:\n{{ JSON.stringify($json) }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [880, 80],
+      "id": "7250d8e2-9b3d-4073-8d37-f946a0679995",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [752, 288],
+      "id": "6b5cef80-284e-4dbc-ac42-0ee89c5164ea",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "w8nIui9qhEXhVDh4",
+          "name": "OpenAI 1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Receber Termo').item.json.telefone }}",
+        "contextWindowLength": 4
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [896, 288],
+      "id": "6ca3f418-27e9-48af-909e-3dbf00834589",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "W57rnU1UrDOiVkzE",
+          "name": "Postgres Supabase"
+        }
+      }
     }
   ],
   "connections": {
     "Receber Termo": {
-      "main": [[{ "node": "Gerar Embedding", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Gerar Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Gerar Embedding": {
-      "main": [[{ "node": "Buscar Produtos Similares", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Buscar Produtos Similares",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Buscar Produtos Similares": {
-      "main": [[{ "node": "Formatar Resultado", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Formatar Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Resultado": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": true,
-  "settings": {
-    "executionOrder": "v1"
+  "pinData": {
+    "Receber Termo": [
+      {
+        "termo": "alcatra",
+        "telefone": "5513981085275",
+        "nome_cliente": ""
+      }
+    ]
   },
-  "tags": []
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dbc381b341b27c8eb54462163acf41a1eabfb2a77579172f7e0e72e41d42e0b3"
+  }
 }

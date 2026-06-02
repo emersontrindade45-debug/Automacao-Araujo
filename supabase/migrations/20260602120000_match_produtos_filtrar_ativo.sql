@@ -14,7 +14,6 @@ returns table (
   nome         text,
   preco_atual  numeric,
   unidade      text,
-  estoque_atual int,
   ativo        boolean,
   similarity   float
 )
@@ -27,7 +26,6 @@ begin
     p.nome,
     p.preco_atual,
     p.unidade,
-    p.estoque_atual,
     p.ativo,
     1 - (p.embedding <=> query_embedding) as similarity
   from produtos p

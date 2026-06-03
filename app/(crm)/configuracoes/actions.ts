@@ -7,6 +7,8 @@ export interface ConfigFollowUp {
   dias_inatividade: number;
   max_tentativas: number;
   mensagem: string;
+  mensagens: string[];
+  intervalos_dias: number[];
 }
 
 export async function salvarConfigFollowUpAction(config: ConfigFollowUp) {
@@ -39,9 +41,17 @@ export async function getConfigFollowUp(): Promise<ConfigFollowUp> {
     .eq("chave", "followup")
     .single();
 
-  return (data?.valor as ConfigFollowUp | null) ?? {
-    dias_inatividade: 3,
-    max_tentativas: 3,
-    mensagem: "Olá! Vimos que você ainda não finalizou seu pedido. Podemos ajudar?",
+  const raw = data?.valor as Partial<ConfigFollowUp> | null;
+
+  return {
+    dias_inatividade: raw?.dias_inatividade ?? 1,
+    max_tentativas: raw?.max_tentativas ?? 3,
+    mensagem: raw?.mensagem ?? "Olá! Vimos que você ainda não finalizou seu atendimento. Podemos ajudar?",
+    mensagens: raw?.mensagens ?? [
+      "Olá, {nome}! Passou por aqui mas não finalizou. Posso te ajudar com alguma coisa?",
+      "{nome}, ainda estamos aqui! Temos ótimas opções hoje. Posso te mostrar nossas ofertas?",
+      "{nome}, última chance de aproveitar nossas ofertas desta semana. Posso ajudar?",
+    ],
+    intervalos_dias: raw?.intervalos_dias ?? [1, 2, 3],
   };
 }

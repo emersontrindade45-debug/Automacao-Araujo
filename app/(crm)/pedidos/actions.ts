@@ -1,14 +1,18 @@
 "use server";
 
-import { getPedidoById, updateStatusPedido, updateValorFinal } from "@/lib/supabase/queries/pedidos";
+import { getPedidoById, updateStatusPedido, updateValorFinal, updateItensPedido } from "@/lib/supabase/queries/pedidos";
 import { updateEtapaCliente } from "@/lib/supabase/queries/clientes";
 import { dispararWebhookN8n } from "@/lib/n8n/client";
 import { revalidatePath } from "next/cache";
-import type { Etapa } from "@/lib/types";
+import type { Etapa, ItemPedido } from "@/lib/types";
 
-const ETAPAS_COM_NOTIFICACAO: Etapa[] = ["pedido_gerado", "separacao", "em_rota", "entregue", "pos_venda"];
+const ETAPAS_COM_NOTIFICACAO: Etapa[] = ["pedido_gerado", "separacao", "em_rota", "entregue", "cancelado", "pos_venda"];
 
-export async function confirmarPedidoAction(pedidoId: string, status: Etapa, valorFinal?: number) {
+export async function confirmarPedidoAction(pedidoId: string, status: Etapa, valorFinal?: number, itens?: ItemPedido[]) {
+  if (itens && itens.length > 0) {
+    await updateItensPedido(pedidoId, itens);
+  }
+
   await updateStatusPedido(pedidoId, status);
 
   if (status === "em_rota" && valorFinal != null) {

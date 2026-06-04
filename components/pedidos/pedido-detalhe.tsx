@@ -56,7 +56,7 @@ export function PedidoDetalhe({ pedido, clienteNome }: PedidoDetalheProps) {
     if (parsed !== undefined && (isNaN(parsed) || parsed <= 0)) return;
     setConfirmado(true);
     setStatus(proximaEtapa);
-    startTransition(() => confirmarPedidoAction(pedido.id, proximaEtapa, parsed));
+    startTransition(() => confirmarPedidoAction(pedido.id, proximaEtapa, parsed, itens));
   }
 
   return (
@@ -98,7 +98,7 @@ export function PedidoDetalhe({ pedido, clienteNome }: PedidoDetalheProps) {
               <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{item.nome}</p>
-                  <p className="text-xs text-muted mt-0.5">{formatMoeda(item.preco_unitario)} / un</p>
+                  <p className="text-xs text-muted mt-0.5">{formatMoeda(item.preco_unitario)} / {item.unidade ?? "un"}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button

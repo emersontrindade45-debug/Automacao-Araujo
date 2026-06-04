@@ -135,20 +135,24 @@ export async function getCrmCanais(dias: PeriodoDias): Promise<CanalStat[]> {
   const inicio = dataInicio(dias);
 
   const [clientesResult, pedidosResult] = await Promise.all([
-    supabase.from("clientes").select("id, canal_origem").gte("criado_em", inicio),
-    supabase.from("pedidos").select("cliente_id").gte("criado_em", inicio),
+    // Conta por atualizado_em — captura clientes recorrentes que voltaram por canal diferente
+    supabase.from("clientes").select("id, canal_origem").gte("atualizado_em", inicio),
+    supabase.from("pedidos").select("cliente_id, origem_conversa").gte("criado_em", inicio),
   ]);
 
   const clientes = clientesResult.data ?? [];
-  const pedidosIds = new Set((pedidosResult.data ?? []).map((p) => p.cliente_id));
+  const pedidos = pedidosResult.data ?? [];
 
   const canais: CanalOrigem[] = ["whatsapp", "instagram", "landpage"];
   return canais.map((canal) => {
     const leadsCanal = clientes.filter((c) => c.canal_origem === canal);
+    const pedidosCanal = pedidos.filter((p) =>
+      (p.origem_conversa ?? "whatsapp") === canal
+    );
     return {
       canal,
       leads: leadsCanal.length,
-      pedidos: leadsCanal.filter((c) => pedidosIds.has(c.id)).length,
+      pedidos: pedidosCanal.length,
     };
   });
 }

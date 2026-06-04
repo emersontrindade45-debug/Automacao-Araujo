@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { transcreverAudio } from "@/lib/openai/whisper";
 import { detectarAtualizacaoPreco } from "@/lib/precos/detectar";
-import { notificarPrecoParaAprovacao } from "@/lib/resend/notificacoes";
 import {
   type EvolutionWebhookPayload,
   evolutionGetTelefone,
@@ -74,8 +73,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL;
-
   const { data: produtos } = await supabase
     .from("produtos")
     .select("id, nome, preco_atual")
@@ -123,17 +120,6 @@ export async function POST(request: NextRequest) {
       instance: payload.instance,
     },
   });
-
-  if (adminEmail) {
-    await notificarPrecoParaAprovacao({
-      produtoNome: produto.nome,
-      precoNovo: detectado.valor,
-      precoAtual: produto.preco_atual,
-      solicitadoPor,
-      precoId: novoPreco.id,
-      adminEmail,
-    });
-  }
 
   return NextResponse.json({ ok: true });
 }

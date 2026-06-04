@@ -72,3 +72,13 @@ export async function updateValorFinal(id: string, valor_final: number) {
 
   if (error) throw error;
 }
+
+export async function updateItensPedido(id: string, itens: import("@/lib/types").ItemPedido[]) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("pedidos")
+    .update({ itens })
+    .eq("id", id);
+
+  if (error) throw error;
+}

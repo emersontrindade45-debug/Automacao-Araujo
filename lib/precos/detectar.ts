@@ -2,7 +2,7 @@
 // "preço [nome do produto] [valor]"
 // Variações aceitas: "preco", "preço", "Preço", maiúsculas, vírgula decimal
 
-const REGEX_PRECO = /^pre[çc]o\s+(.+?)\s+([\d]+[,.][\d]{1,2}|[\d]+)\s*$/i;
+const REGEX_PRECO = /^pre[çc]o\s+(.+?)\s+([\d]+[,.]\s*[\d]{1,2}|[\d]+)\s*$/i;
 
 export interface PrecoDetectado {
   texto_produto: string;
@@ -14,7 +14,7 @@ export function detectarAtualizacaoPreco(texto: string): PrecoDetectado | null {
   if (!match) return null;
 
   const texto_produto = match[1].trim();
-  const valorStr = match[2].replace(",", ".");
+  const valorStr = match[2].replace(/\s/g, "").replace(",", ".");
   const valor = parseFloat(valorStr);
 
   if (isNaN(valor) || valor <= 0) return null;

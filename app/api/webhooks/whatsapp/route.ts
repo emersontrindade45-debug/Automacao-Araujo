@@ -41,6 +41,30 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAdminClient();
 
+  // Verificar se é funcionário autorizado — redireciona para price-update e encerra
+  const telefoneNumerico = telefone.replace(/\D/g, "");
+  const { data: funcionario } = await supabase
+    .from("funcionarios_autorizados")
+    .select("id")
+    .eq("telefone", telefoneNumerico)
+    .eq("ativo", true)
+    .maybeSingle();
+
+  if (funcionario) {
+    const priceUpdateUrl = new URL("/api/webhooks/whatsapp/price-update", request.url);
+    await fetch(priceUpdateUrl.toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.WHATSAPP_VERIFY_TOKEN
+          ? { apikey: process.env.WHATSAPP_VERIFY_TOKEN }
+          : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+    return NextResponse.json({ ok: true });
+  }
+
   // Verificar se cliente já existe e qual era sua etapa anterior
   const ETAPAS_RETORNANTE = ["entregue", "cancelado"] as const;
   const { data: clienteExistente } = await supabase
@@ -52,7 +76,7 @@ export async function POST(request: NextRequest) {
   const etapaAnterior = clienteExistente?.etapa_atual ?? null;
   const isRetornante = ETAPAS_RETORNANTE.includes(etapaAnterior as typeof ETAPAS_RETORNANTE[number]);
 
-  // Upsert cliente — preserva etapa se for retornante, senão move para atendimento
+  // Upsert cliente — atualiza canal_origem para whatsapp pois o contato atual veio pelo WhatsApp
   const { data: cliente, error: upsertError } = await supabase
     .from("clientes")
     .upsert(

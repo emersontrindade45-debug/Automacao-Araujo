@@ -27,6 +27,7 @@ export interface Cliente {
   atualizado_em: string;
   endereco_entrega?: string | null;
   resumo_ultimo_atendimento?: string | null;
+  proxima_origem?: string | null;
 }
 
 export type TipoProduto = "produto" | "kit" | "oferta";
@@ -51,6 +52,7 @@ export interface ItemPedido {
   nome: string;
   quantidade: number;
   preco_unitario: number;
+  unidade?: string;
 }
 
 export interface Pedido {
@@ -63,6 +65,7 @@ export interface Pedido {
   forma_pagamento: string;
   total: number;
   valor_final?: number | null;
+  origem_conversa?: string | null;
   criado_em: string;
   atualizado_em: string;
 }

@@ -67,12 +67,18 @@ export async function POST(request: NextRequest) {
       0
     );
 
+    // Lê proxima_origem do cliente para registrar a origem dessa conversa
+    const origemConversa = (cliente as { proxima_origem?: string | null }).proxima_origem
+      ?? cliente.canal_origem
+      ?? "whatsapp";
+
     const pedidoData = {
       itens: handoff.itens_pedido,
       status: "pedido_gerado" as const,
       endereco_entrega: handoff.endereco_entrega ?? "",
       forma_pagamento: handoff.forma_pagamento ?? "",
       total,
+      origem_conversa: origemConversa,
     };
 
     // Se o n8n enviou o ID do rascunho, atualiza diretamente — sem busca extra
@@ -102,6 +108,14 @@ export async function POST(request: NextRequest) {
       } else {
         pedidoCriado = pedido;
       }
+    }
+
+    // Limpa proxima_origem após uso
+    if ((cliente as { proxima_origem?: string | null }).proxima_origem) {
+      await supabase
+        .from("clientes")
+        .update({ proxima_origem: null })
+        .eq("id", cliente.id);
     }
   }
 

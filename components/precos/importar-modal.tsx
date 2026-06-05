@@ -145,7 +145,7 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">estoque_atual</code>,{" "}
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">categoria</code>,{" "}
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">validade</code>.
-                {" "}Produtos novos serão criados; existentes serão atualizados. As colunas <em>categoria</em> e <em>validade</em> são opcionais.
+                {" "}Esta importação <strong>substitui todo o catálogo</strong>: produtos da planilha serão criados ou atualizados, e os que não estiverem na planilha serão removidos. Kits e ofertas não são afetados. As colunas <em>categoria</em> e <em>validade</em> são opcionais.
               </p>
               <button
                 type="button"
@@ -187,7 +187,7 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
           {previa && (
             <div className="space-y-3">
               <p className="text-sm font-medium text-foreground">
-                {validas.length} produto{validas.length !== 1 ? "s" : ""} serão atualizados
+                {validas.length} produto{validas.length !== 1 ? "s" : ""} na planilha (catálogo será substituído)
                 {comErro.length > 0 && (
                   <span className="text-warning ml-1">· {comErro.length} linha{comErro.length !== 1 ? "s" : ""} com erro (ignoradas)</span>
                 )}

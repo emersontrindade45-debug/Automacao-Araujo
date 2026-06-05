@@ -119,6 +119,7 @@ export async function deletarOfertaKit(id: string) {
 
 export async function upsertProdutosEmLote(linhas: LinhaPlanilha[]) {
   const supabase = createAdminClient();
+
   await Promise.all(
     linhas.map(({ nome, unidade, preco_atual, estoque_atual, categoria, validade }) =>
       supabase
@@ -138,4 +139,23 @@ export async function upsertProdutosEmLote(linhas: LinhaPlanilha[]) {
         .throwOnError()
     )
   );
+
+  const nomesImportados = new Set(linhas.map((l) => l.nome));
+
+  const { data: existentes } = await supabase
+    .from("produtos")
+    .select("id, nome")
+    .eq("tipo", "produto");
+
+  const idsParaRemover = (existentes ?? [])
+    .filter((p) => !nomesImportados.has(p.nome))
+    .map((p) => p.id);
+
+  if (idsParaRemover.length > 0) {
+    await supabase
+      .from("produtos")
+      .delete()
+      .in("id", idsParaRemover)
+      .throwOnError();
+  }
 }

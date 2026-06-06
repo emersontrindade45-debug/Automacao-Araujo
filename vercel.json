@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/manutencao/alerta-consumo",
+      "schedule": "0 * * * *"
+    }
+  ]
+}

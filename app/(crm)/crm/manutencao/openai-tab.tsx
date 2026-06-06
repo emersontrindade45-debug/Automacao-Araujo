@@ -10,6 +10,10 @@ const PERIODOS = [
   { value: "30d", label: "30 dias" },
 ];
 
+const LIMITE_DIARIO = 0.19;
+const LIMITE_SEMANAL = 1.35;
+const LIMITE_MENSAL  = 5.77;
+
 type DiaUsage = { dia: string; input: number; output: number; requests: number; custo: number };
 type ModeloUsage = { input: number; output: number; requests: number; custo: number };
 
@@ -116,6 +120,49 @@ export function OpenAITab() {
 
       {data && (
         <>
+          {/* Barras de progresso vs limites de referência */}
+          {(() => {
+            const custoHoje = data.por_dia.at(-1)?.custo ?? 0;
+            const pctDia = Math.min((custoHoje / LIMITE_DIARIO) * 100, 100);
+            const pctSem = Math.min((data.total_custo_usd / LIMITE_SEMANAL) * 100, 100);
+            const pctMes = Math.min((data.total_custo_usd / LIMITE_MENSAL) * 100, 100);
+            const cor = (pct: number) =>
+              pct >= 100 ? "bg-danger" : pct >= 80 ? "bg-warning" : "bg-brand";
+
+            const linhas = [
+              { label: "Hoje", custo: custoHoje, limite: LIMITE_DIARIO, pct: pctDia },
+              ...(period === "7d"  ? [{ label: "Semana", custo: data.total_custo_usd, limite: LIMITE_SEMANAL, pct: pctSem }] : []),
+              ...(period === "30d" ? [{ label: "Mês",    custo: data.total_custo_usd, limite: LIMITE_MENSAL,  pct: pctMes  }] : []),
+            ];
+
+            return (
+              <div className="bg-surface border border-border rounded-xl p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Consumo vs limite de referência</h3>
+                {linhas.map((l) => (
+                  <div key={l.label} className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted">{l.label}</span>
+                      <span className={l.pct >= 80 ? "text-warning font-semibold" : "text-foreground"}>
+                        {fmtUsd(l.custo)} / {fmtUsd(l.limite)}
+                        {l.pct >= 80 && " ⚠️"}
+                      </span>
+                    </div>
+                    <div className="h-2 bg-surface-subtle rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${cor(l.pct)}`}
+                        style={{ width: `${Math.max(l.pct, l.custo > 0 ? 1 : 0)}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-subtle text-right">{l.pct.toFixed(1)}% do limite diário</p>
+                  </div>
+                ))}
+                <p className="text-[10px] text-subtle pt-1">
+                  Alerta WhatsApp disparado automaticamente ao atingir 80% do limite diário (US$ {(LIMITE_DIARIO * 0.8).toFixed(2)})
+                </p>
+              </div>
+            );
+          })()}
+
           {/* Cards de resumo */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-surface border border-border rounded-xl p-4">

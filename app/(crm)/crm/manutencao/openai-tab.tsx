@@ -37,7 +37,10 @@ function fmtUsd(n: number): string {
 }
 
 function fmtData(iso: string): string {
-  const [, m, d] = iso.split("-");
+  // Evita hydration mismatch — não usar Date, só manipulação de string
+  const parts = iso.split("-");
+  const m = parts[1] ?? "";
+  const d = parts[2] ?? "";
   return `${d}/${m}`;
 }
 

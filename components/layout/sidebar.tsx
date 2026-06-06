@@ -11,14 +11,16 @@ interface NavItem {
   icon: React.ReactNode;
   badge?: number;
   somenteAdmin?: boolean;
+  somenteDev?: boolean;
 }
 
 interface SidebarProps {
   precosPendentes?: number;
   papel?: Papel;
+  isDev?: boolean;
 }
 
-export function Sidebar({ precosPendentes = 0, papel = "atendimento" }: SidebarProps) {
+export function Sidebar({ precosPendentes = 0, papel = "atendimento", isDev = false }: SidebarProps) {
   const pathname = usePathname();
   const isAdmin = papel === "admin";
 
@@ -91,6 +93,16 @@ export function Sidebar({ precosPendentes = 0, papel = "atendimento" }: SidebarP
       ),
     },
     {
+      href: "/crm/manutencao",
+      label: "Manutenção",
+      somenteDev: true,
+      icon: (
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+          <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+    {
       href: "/configuracoes",
       label: "Configurações",
       somenteAdmin: true,
@@ -112,7 +124,11 @@ export function Sidebar({ precosPendentes = 0, papel = "atendimento" }: SidebarP
 
       {/* Nav */}
       <nav className="flex flex-col gap-1 p-3 flex-1 overflow-y-auto">
-        {navItems.filter((item) => !item.somenteAdmin || isAdmin).map((item) => {
+        {navItems.filter((item) => {
+          if (item.somenteDev) return isDev;
+          if (item.somenteAdmin) return isAdmin;
+          return true;
+        }).map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(item.href + "/");
           return (

@@ -64,5 +64,14 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Rota de manutenção: acessível apenas ao desenvolvedor (DEV_EMAIL)
+  const isManutencaoRoute = pathname.startsWith("/crm/manutencao");
+  const devEmail = process.env.DEV_EMAIL;
+  if (user && isManutencaoRoute && user.email !== devEmail) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/kanban";
+    return NextResponse.redirect(url);
+  }
+
   return supabaseResponse;
 }

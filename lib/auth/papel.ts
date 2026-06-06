@@ -22,3 +22,11 @@ export async function isAdminUser(): Promise<boolean> {
   const user = await getSessionUser();
   return user?.app_metadata?.papel === "admin";
 }
+
+/** Returns true only for the developer account, identified by DEV_EMAIL env var. */
+export async function isDevUser(): Promise<boolean> {
+  const devEmail = process.env.DEV_EMAIL;
+  if (!devEmail) return false;
+  const user = await getSessionUser();
+  return user?.email === devEmail;
+}

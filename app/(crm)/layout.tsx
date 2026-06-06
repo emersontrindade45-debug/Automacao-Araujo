@@ -13,9 +13,10 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
 
   const userName = user?.user_metadata?.nome ?? user?.email?.split("@")[0] ?? "Usuário";
   const userPapel = normalizePapel(user?.app_metadata?.papel);
+  const isDev = !!process.env.DEV_EMAIL && user?.email === process.env.DEV_EMAIL;
 
   return (
-    <Shell userName={userName} userPapel={userPapel} precosPendentes={precosPendentes}>
+    <Shell userName={userName} userPapel={userPapel} precosPendentes={precosPendentes} isDev={isDev}>
       {children}
     </Shell>
   );

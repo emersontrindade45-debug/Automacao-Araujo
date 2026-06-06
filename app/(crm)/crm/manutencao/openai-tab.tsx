@@ -10,8 +10,7 @@ const PERIODOS_RAPIDOS = [
 ];
 
 const LIMITE_DIARIO = 0.19;
-const LIMITE_SEMANAL = 1.35;
-const LIMITE_MENSAL  = 5.77;
+const SALDO_PADRAO  = 4.56;
 
 type DiaUsage = { dia: string; input: number; output: number; requests: number; custo: number };
 type ModeloUsage = { input: number; output: number; requests: number; custo: number };
@@ -40,6 +39,10 @@ function fmtUsd(n: number): string {
   return `US$ ${n.toFixed(4)}`;
 }
 
+function fmtUsd2(n: number): string {
+  return `US$ ${n.toFixed(2)}`;
+}
+
 function fmtData(iso: string): string {
   const parts = iso.split("-");
   const m = parts[1] ?? "";
@@ -50,13 +53,6 @@ function fmtData(iso: string): string {
 function periodoEmDias(period: string): number {
   if (period.endsWith("m")) return parseInt(period) * 30;
   return parseInt(period) || 1;
-}
-
-function limiteParaPeriodo(period: string): { label: string; limite: number } {
-  const dias = periodoEmDias(period);
-  const limite = LIMITE_DIARIO * dias;
-  if (dias === 1) return { label: "Hoje", limite };
-  return { label: `${dias} dias`, limite };
 }
 
 export function OpenAITab() {
@@ -70,6 +66,34 @@ export function OpenAITab() {
   const [diasCustom, setDiasCustom] = useState("14");
   const [mesesCustom, setMesesCustom] = useState("2");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Saldo disponível — editável, salvo em localStorage
+  const [saldo, setSaldo] = useState(SALDO_PADRAO);
+  const [editandoSaldo, setEditandoSaldo] = useState(false);
+  const [saldoInput, setSaldoInput] = useState(String(SALDO_PADRAO));
+  const saldoInputRef = useRef<HTMLInputElement>(null);
+
+  // Carrega saldo salvo
+  useEffect(() => {
+    const salvo = localStorage.getItem("openai_saldo_disponivel");
+    if (salvo) {
+      const v = parseFloat(salvo);
+      if (!isNaN(v) && v >= 0) { setSaldo(v); setSaldoInput(v.toFixed(2)); }
+    }
+  }, []);
+
+  function salvarSaldo() {
+    const v = parseFloat(saldoInput);
+    if (!isNaN(v) && v >= 0) {
+      setSaldo(v);
+      localStorage.setItem("openai_saldo_disponivel", String(v));
+    }
+    setEditandoSaldo(false);
+  }
+
+  useEffect(() => {
+    if (editandoSaldo) saldoInputRef.current?.focus();
+  }, [editandoSaldo]);
 
   const buscar = useCallback(async (p: string) => {
     setLoading(true);
@@ -91,7 +115,6 @@ export function OpenAITab() {
 
   useEffect(() => { buscar(period); }, [period, buscar]);
 
-  // Ao trocar modo, foca o input
   useEffect(() => {
     if (modo !== "rapido") inputRef.current?.focus();
   }, [modo]);
@@ -106,18 +129,71 @@ export function OpenAITab() {
     }
   }
 
+  const dias = periodoEmDias(period);
+  const limitePeriodo = LIMITE_DIARIO * dias;
+  const consumidoPeriodo = data?.total_custo_usd ?? 0;
+  const custoHoje = data?.por_dia.at(-1)?.custo ?? 0;
+
+  // Percentuais
+  const pctDia     = Math.min((custoHoje / LIMITE_DIARIO) * 100, 100);
+  const pctPeriodo = Math.min((consumidoPeriodo / limitePeriodo) * 100, 100);
+  const pctSaldo   = Math.min((consumidoPeriodo / saldo) * 100, 100);
+  const saldoRestante = Math.max(saldo - consumidoPeriodo, 0);
+
+  function corBarra(pct: number) {
+    return pct >= 100 ? "bg-danger" : pct >= 80 ? "bg-warning" : "bg-brand";
+  }
+
   const maxDiaCusto = data ? Math.max(...data.por_dia.map((d) => d.custo), 0.000001) : 1;
   const modeloEntries = data ? Object.entries(data.por_modelo).sort((a, b) => b[1].custo - a[1].custo) : [];
-  const refPeriodo = data ? limiteParaPeriodo(period) : null;
-  const custoHoje = data?.por_dia.at(-1)?.custo ?? 0;
-  const pctDia = Math.min((custoHoje / LIMITE_DIARIO) * 100, 100);
-  const cor = (pct: number) => pct >= 100 ? "bg-danger" : pct >= 80 ? "bg-warning" : "bg-brand";
 
   return (
     <div className="space-y-6">
+      {/* Saldo disponível */}
+      <div className="bg-surface border border-border rounded-xl p-4 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs text-muted mb-0.5">Saldo total disponível</p>
+          {editandoSaldo ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted">US$</span>
+              <input
+                ref={saldoInputRef}
+                type="number"
+                min={0}
+                step={0.01}
+                value={saldoInput}
+                onChange={(e) => setSaldoInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") salvarSaldo(); if (e.key === "Escape") setEditandoSaldo(false); }}
+                className="w-28 px-2 py-1 text-sm border border-brand rounded-lg bg-surface text-foreground focus:outline-none"
+              />
+              <button onClick={salvarSaldo} className="text-xs px-2 py-1 bg-brand text-white rounded-lg">Salvar</button>
+              <button onClick={() => setEditandoSaldo(false)} className="text-xs text-muted hover:text-foreground">Cancelar</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <p className="text-2xl font-semibold text-foreground">{fmtUsd2(saldo)}</p>
+              <button
+                onClick={() => { setSaldoInput(saldo.toFixed(2)); setEditandoSaldo(true); }}
+                className="text-xs text-muted hover:text-brand transition-colors"
+                title="Editar saldo"
+              >
+                ✏️ editar
+              </button>
+            </div>
+          )}
+          <p className="text-[10px] text-subtle mt-1">Atualize quando os créditos mudarem em platform.openai.com → Billing → Credit grants</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-xs text-muted mb-0.5">Restante após período</p>
+          <p className={`text-xl font-semibold ${saldoRestante < saldo * 0.2 ? "text-warning" : "text-foreground"}`}>
+            {fmtUsd2(saldoRestante)}
+          </p>
+          <p className="text-[10px] text-subtle mt-1">{fmtUsd2(consumidoPeriodo)} usados no período</p>
+        </div>
+      </div>
+
       {/* Filtros */}
       <div className="bg-surface border border-border rounded-xl p-4 space-y-3">
-        {/* Botões rápidos */}
         <div className="flex items-center gap-1 flex-wrap">
           {PERIODOS_RAPIDOS.map((p) => (
             <button
@@ -133,18 +209,12 @@ export function OpenAITab() {
               {p.label}
             </button>
           ))}
-
-          {/* Separador */}
           <span className="text-border text-xs mx-1">|</span>
-
-          {/* Modo personalizado */}
           <button
             onClick={() => setModo(modo === "dias" ? "rapido" : "dias")}
             className={[
               "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
-              modo === "dias"
-                ? "bg-brand text-white border-brand"
-                : "bg-surface text-muted border-border hover:border-brand hover:text-brand",
+              modo === "dias" ? "bg-brand text-white border-brand" : "bg-surface text-muted border-border hover:border-brand hover:text-brand",
             ].join(" ")}
           >
             Dias
@@ -153,78 +223,54 @@ export function OpenAITab() {
             onClick={() => setModo(modo === "meses" ? "rapido" : "meses")}
             className={[
               "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
-              modo === "meses"
-                ? "bg-brand text-white border-brand"
-                : "bg-surface text-muted border-border hover:border-brand hover:text-brand",
+              modo === "meses" ? "bg-brand text-white border-brand" : "bg-surface text-muted border-border hover:border-brand hover:text-brand",
             ].join(" ")}
           >
             Meses
           </button>
-
           {loading && <span className="text-xs text-muted ml-1 animate-pulse">Atualizando...</span>}
-          <button
-            onClick={() => buscar(period)}
-            className="ml-auto text-xs text-muted hover:text-foreground transition-colors"
-          >
+          <button onClick={() => buscar(period)} className="ml-auto text-xs text-muted hover:text-foreground transition-colors">
             ↻ Atualizar
           </button>
         </div>
 
-        {/* Input personalizado */}
         {modo !== "rapido" && (
           <div className="flex items-center gap-2 pt-1">
+            <label className="text-xs text-muted shrink-0">Últimos</label>
             {modo === "dias" ? (
-              <>
-                <label className="text-xs text-muted shrink-0">Últimos</label>
-                <input
-                  ref={inputRef}
-                  type="number"
-                  min={1}
-                  max={365}
-                  value={diasCustom}
-                  onChange={(e) => setDiasCustom(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && aplicarCustom()}
-                  className="w-20 px-2 py-1 text-xs border border-border rounded-lg bg-surface text-foreground focus:outline-none focus:border-brand"
-                />
-                <label className="text-xs text-muted shrink-0">dias</label>
-              </>
+              <input
+                ref={inputRef}
+                type="number" min={1} max={365}
+                value={diasCustom}
+                onChange={(e) => setDiasCustom(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && aplicarCustom()}
+                className="w-20 px-2 py-1 text-xs border border-border rounded-lg bg-surface text-foreground focus:outline-none focus:border-brand"
+              />
             ) : (
-              <>
-                <label className="text-xs text-muted shrink-0">Últimos</label>
-                <input
-                  ref={inputRef}
-                  type="number"
-                  min={1}
-                  max={12}
-                  value={mesesCustom}
-                  onChange={(e) => setMesesCustom(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && aplicarCustom()}
-                  className="w-20 px-2 py-1 text-xs border border-border rounded-lg bg-surface text-foreground focus:outline-none focus:border-brand"
-                />
-                <label className="text-xs text-muted shrink-0">
-                  {parseInt(mesesCustom) === 1 ? "mês" : "meses"}
-                </label>
-              </>
+              <input
+                ref={inputRef}
+                type="number" min={1} max={12}
+                value={mesesCustom}
+                onChange={(e) => setMesesCustom(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && aplicarCustom()}
+                className="w-20 px-2 py-1 text-xs border border-border rounded-lg bg-surface text-foreground focus:outline-none focus:border-brand"
+              />
             )}
-            <button
-              onClick={aplicarCustom}
-              className="px-3 py-1 rounded-lg text-xs font-medium bg-brand text-white hover:opacity-90 transition-opacity"
-            >
+            <label className="text-xs text-muted shrink-0">
+              {modo === "dias" ? "dias" : parseInt(mesesCustom) === 1 ? "mês" : "meses"}
+            </label>
+            <button onClick={aplicarCustom} className="px-3 py-1 rounded-lg text-xs font-medium bg-brand text-white hover:opacity-90 transition-opacity">
               Aplicar
             </button>
             <span className="text-xs text-subtle">
-              {modo === "dias"
-                ? `≈ US$ ${(LIMITE_DIARIO * (parseInt(diasCustom) || 1)).toFixed(2)} esperado`
-                : `≈ US$ ${(LIMITE_DIARIO * 30 * (parseInt(mesesCustom) || 1)).toFixed(2)} esperado`}
+              ≈ {fmtUsd2(LIMITE_DIARIO * (modo === "dias" ? (parseInt(diasCustom) || 1) : (parseInt(mesesCustom) || 1) * 30))} esperado
             </span>
           </div>
         )}
       </div>
 
       {erro && (
-        <div className="bg-danger/10 border border-danger/30 rounded-xl px-4 py-3 text-sm text-danger">
-          {erro}
-        </div>
+        <div className="bg-danger/10 border border-danger/30 rounded-xl px-4 py-3 text-sm text-danger">{erro}</div>
       )}
 
       {!data && !loading && !erro && (
@@ -236,56 +282,65 @@ export function OpenAITab() {
       {data && (
         <>
           {/* Barras de progresso */}
-          <div className="bg-surface border border-border rounded-xl p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">Consumo vs limite de referência</h3>
+          <div className="bg-surface border border-border rounded-xl p-4 space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Referências de consumo</h3>
 
-            {/* Barra do dia — sempre visível */}
+            {/* Hoje vs limite diário */}
             <div className="space-y-1">
               <div className="flex justify-between text-xs">
                 <span className="text-muted">Hoje</span>
                 <span className={pctDia >= 80 ? "text-warning font-semibold" : "text-foreground"}>
-                  {fmtUsd(custoHoje)} / {fmtUsd(LIMITE_DIARIO)}
+                  {fmtUsd(custoHoje)} / {fmtUsd2(LIMITE_DIARIO)}/dia
                   {pctDia >= 80 && " ⚠️"}
                 </span>
               </div>
               <div className="h-2 bg-surface-subtle rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${cor(pctDia)}`}
-                  style={{ width: `${Math.max(pctDia, custoHoje > 0 ? 1 : 0)}%` }}
-                />
+                <div className={`h-full rounded-full transition-all ${corBarra(pctDia)}`}
+                  style={{ width: `${Math.max(pctDia, custoHoje > 0 ? 1 : 0)}%` }} />
               </div>
               <p className="text-[10px] text-subtle text-right">{pctDia.toFixed(1)}% do limite diário</p>
             </div>
 
-            {/* Barra do período selecionado */}
-            {refPeriodo && periodoEmDias(period) > 1 && (() => {
-              const pct = Math.min((data.total_custo_usd / refPeriodo.limite) * 100, 100);
-              return (
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted">{refPeriodo.label}</span>
-                    <span className={pct >= 80 ? "text-warning font-semibold" : "text-foreground"}>
-                      {fmtUsd(data.total_custo_usd)} / {fmtUsd(refPeriodo.limite)}
-                      {pct >= 80 && " ⚠️"}
-                    </span>
-                  </div>
-                  <div className="h-2 bg-surface-subtle rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${cor(pct)}`}
-                      style={{ width: `${Math.max(pct, data.total_custo_usd > 0 ? 1 : 0)}%` }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-subtle text-right">{pct.toFixed(1)}% do limite estimado para o período</p>
+            {/* Período selecionado vs limite proporcional */}
+            {dias > 1 && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted">{dias} dias — consumido</span>
+                  <span className={pctPeriodo >= 80 ? "text-warning font-semibold" : "text-foreground"}>
+                    {fmtUsd(consumidoPeriodo)} / {fmtUsd2(limitePeriodo)} estimado
+                    {pctPeriodo >= 80 && " ⚠️"}
+                  </span>
                 </div>
-              );
-            })()}
+                <div className="h-2 bg-surface-subtle rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full transition-all ${corBarra(pctPeriodo)}`}
+                    style={{ width: `${Math.max(pctPeriodo, consumidoPeriodo > 0 ? 1 : 0)}%` }} />
+                </div>
+                <p className="text-[10px] text-subtle text-right">{pctPeriodo.toFixed(1)}% do estimado para {dias} dias</p>
+              </div>
+            )}
 
-            <p className="text-[10px] text-subtle pt-1">
-              Alerta WhatsApp às 18h quando consumo diário ≥ 80% de US$ {LIMITE_DIARIO.toFixed(2)} (US$ {(LIMITE_DIARIO * 0.8).toFixed(3)})
+            {/* Consumo do período vs saldo total */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs">
+                <span className="text-muted">Saldo total usado no período</span>
+                <span className={pctSaldo >= 80 ? "text-danger font-semibold" : "text-foreground"}>
+                  {fmtUsd(consumidoPeriodo)} / {fmtUsd2(saldo)} disponível
+                  {pctSaldo >= 80 && " ⚠️"}
+                </span>
+              </div>
+              <div className="h-2 bg-surface-subtle rounded-full overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${corBarra(pctSaldo)}`}
+                  style={{ width: `${Math.max(pctSaldo, consumidoPeriodo > 0 ? 1 : 0)}%` }} />
+              </div>
+              <p className="text-[10px] text-subtle text-right">{pctSaldo.toFixed(1)}% do saldo total disponível</p>
+            </div>
+
+            <p className="text-[10px] text-subtle border-t border-border pt-2">
+              Alerta WhatsApp às 18h quando consumo diário ≥ 80% de US$ {LIMITE_DIARIO.toFixed(2)}
             </p>
           </div>
 
-          {/* Cards de resumo */}
+          {/* Cards resumo */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-surface border border-border rounded-xl p-4">
               <p className="text-xs text-muted mb-1">Total de tokens</p>
@@ -293,7 +348,7 @@ export function OpenAITab() {
               <p className="text-xs text-subtle mt-1">{fmt(data.total_input_tokens)} entrada · {fmt(data.total_output_tokens)} saída</p>
             </div>
             <div className="bg-surface border border-border rounded-xl p-4">
-              <p className="text-xs text-muted mb-1">Custo estimado</p>
+              <p className="text-xs text-muted mb-1">Custo no período</p>
               <p className="text-xl font-semibold text-foreground">{fmtUsd(data.total_custo_usd)}</p>
               <p className="text-xs text-subtle mt-1">{data.start} → {data.end}</p>
             </div>
@@ -305,18 +360,14 @@ export function OpenAITab() {
             <div className="bg-surface border border-border rounded-xl p-4">
               <p className="text-xs text-muted mb-1">Custo médio/dia</p>
               <p className="text-xl font-semibold text-foreground">
-                {data.por_dia.length > 0
-                  ? fmtUsd(data.total_custo_usd / data.por_dia.length)
-                  : fmtUsd(0)}
+                {data.por_dia.length > 0 ? fmtUsd(data.total_custo_usd / data.por_dia.length) : fmtUsd(0)}
               </p>
               <p className="text-xs text-subtle mt-1">{data.por_dia.length} dias no período</p>
             </div>
           </div>
 
           {data.aviso && (
-            <div className="bg-warning/10 border border-warning/30 rounded-xl px-4 py-3 text-xs text-warning">
-              {data.aviso}
-            </div>
+            <div className="bg-warning/10 border border-warning/30 rounded-xl px-4 py-3 text-xs text-warning">{data.aviso}</div>
           )}
 
           {data.total_tokens === 0 ? (
@@ -330,7 +381,6 @@ export function OpenAITab() {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Gráfico por dia */}
               <div className="bg-surface border border-border rounded-xl p-4 space-y-3">
                 <h3 className="text-sm font-semibold text-foreground">Custo por dia</h3>
                 <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -342,17 +392,14 @@ export function OpenAITab() {
                         <span className="text-subtle">{fmtUsd(d.custo)}</span>
                       </div>
                       <div className="h-1.5 bg-surface-subtle rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-brand rounded-full transition-all"
-                          style={{ width: `${Math.max((d.custo / maxDiaCusto) * 100, d.custo > 0 ? 2 : 0)}%` }}
-                        />
+                        <div className="h-full bg-brand rounded-full transition-all"
+                          style={{ width: `${Math.max((d.custo / maxDiaCusto) * 100, d.custo > 0 ? 2 : 0)}%` }} />
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Breakdown por modelo */}
               <div className="bg-surface border border-border rounded-xl p-4 space-y-3">
                 <h3 className="text-sm font-semibold text-foreground">Por modelo</h3>
                 <table className="w-full text-xs">

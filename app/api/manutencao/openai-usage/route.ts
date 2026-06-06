@@ -44,9 +44,9 @@ function periodoParaDatas(period: string): { startTs: number; endTs: number; sta
 }
 
 export async function GET(request: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_ADMIN_KEY ?? process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "OPENAI_API_KEY não configurada" }, { status: 500 });
+    return NextResponse.json({ error: "OPENAI_ADMIN_KEY não configurada" }, { status: 500 });
   }
 
   const { searchParams } = new URL(request.url);

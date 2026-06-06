@@ -24,22 +24,22 @@ function periodoParaDatas(period: string): { startTs: number; endTs: number; sta
   const inicio = new Date(agora);
   inicio.setHours(0, 0, 0, 0);
 
-  switch (period) {
-    case "1d":  break;
-    case "3d":  inicio.setDate(inicio.getDate() - 2); break;
-    case "7d":  inicio.setDate(inicio.getDate() - 6); break;
-    case "15d": inicio.setDate(inicio.getDate() - 14); break;
-    case "30d": inicio.setDate(inicio.getDate() - 29); break;
-    default:    inicio.setDate(inicio.getDate() - 6);
+  // Suporta Xd (dias) e Xm (meses)
+  if (period.endsWith("m")) {
+    const meses = Math.min(parseInt(period) || 1, 12);
+    inicio.setMonth(inicio.getMonth() - meses);
+  } else {
+    const dias = Math.min(parseInt(period) || 7, 365);
+    inicio.setDate(inicio.getDate() - (dias - 1));
   }
 
-  const fmt = (d: Date) => d.toISOString().split("T")[0];
+  const fmtDate = (d: Date) => d.toISOString().split("T")[0];
 
   return {
     startTs: Math.floor(inicio.getTime() / 1000),
     endTs: Math.floor(fim.getTime() / 1000),
-    start: fmt(inicio),
-    end: fmt(agora),
+    start: fmtDate(inicio),
+    end: fmtDate(agora),
   };
 }
 

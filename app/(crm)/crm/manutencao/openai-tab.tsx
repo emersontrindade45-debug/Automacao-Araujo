@@ -47,17 +47,16 @@ function fmtData(iso: string): string {
   return `${d}/${m}`;
 }
 
-function limiteParaPeriodo(period: string): { label: string; limite: number } | null {
-  const dias = periodoEmDias(period);
-  if (dias <= 1)  return { label: "Hoje",   limite: LIMITE_DIARIO };
-  if (dias <= 7)  return { label: "Semana",  limite: LIMITE_SEMANAL * Math.ceil(dias / 7) };
-  if (dias <= 31) return { label: "Mês",     limite: LIMITE_MENSAL };
-  return { label: `${dias} dias`, limite: LIMITE_MENSAL * Math.ceil(dias / 30) };
-}
-
 function periodoEmDias(period: string): number {
   if (period.endsWith("m")) return parseInt(period) * 30;
-  return parseInt(period);
+  return parseInt(period) || 1;
+}
+
+function limiteParaPeriodo(period: string): { label: string; limite: number } {
+  const dias = periodoEmDias(period);
+  const limite = LIMITE_DIARIO * dias;
+  if (dias === 1) return { label: "Hoje", limite };
+  return { label: `${dias} dias`, limite };
 }
 
 export function OpenAITab() {
@@ -216,7 +215,7 @@ export function OpenAITab() {
             <span className="text-xs text-subtle">
               {modo === "dias"
                 ? `≈ US$ ${(LIMITE_DIARIO * (parseInt(diasCustom) || 1)).toFixed(2)} esperado`
-                : `≈ US$ ${(LIMITE_MENSAL * (parseInt(mesesCustom) || 1)).toFixed(2)} esperado`}
+                : `≈ US$ ${(LIMITE_DIARIO * 30 * (parseInt(mesesCustom) || 1)).toFixed(2)} esperado`}
             </span>
           </div>
         )}

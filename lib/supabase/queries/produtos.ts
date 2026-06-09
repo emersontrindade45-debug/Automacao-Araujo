@@ -63,7 +63,7 @@ export async function getOfertasEKits() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("produtos")
-    .select("id, nome, preco_atual, unidade, tipo, descricao, validade, categoria, ativo, disponivel, criado_em")
+    .select("id, nome, preco_atual, unidade, tipo, descricao, validade, categoria, ativo, disponivel, criado_em, nicho, imagem_url")
     .in("tipo", ["oferta", "kit"])
     .order("tipo")
     .order("nome");

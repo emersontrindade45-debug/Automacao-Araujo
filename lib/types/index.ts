@@ -45,6 +45,8 @@ export interface Produto {
   validade: string | null;
   categoria: string | null;
   disponivel: boolean;
+  nicho: string | null;
+  imagem_url: string | null;
 }
 
 export interface ItemPedido {

@@ -5,21 +5,32 @@
       "parameters": {
         "workflowInputs": {
           "values": [
-            { "name": "categoria" }
+            { "name": "categoria" },
+            { "name": "nome_cliente" },
+            { "name": "telefone" }
           ]
         }
       },
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [240, 300],
-      "id": "f9-trigger",
+      "position": [-112, 0],
+      "id": "bcb53b79-4491-40a3-b9c5-2f254eec0c19",
       "name": "Receber Categoria",
       "alwaysOutputData": true
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "=https://zziapgnenvugyvrgrhrs.supabase.co/rest/v1/produtos?select=id,nome,preco_atual,unidade,estoque_atual&categoria=ilike.*{{ encodeURIComponent($json.categoria || '') }}*&ativo=eq.true&order=nome.asc",
+        "jsCode": "const input = $json.categoria || $json.query || '';\nconst query = input.toLowerCase();\n\nconst categorias = {\n  ofertas: [\n    'oferta',\n    'ofertas',\n    'promoção',\n    'promoções',\n    'promocao',\n    'promocoes',\n    'desconto',\n    'descontos'\n  ],\n  Kits: [\n    'kit',\n    'kits',\n    'combo',\n    'combos',\n    'churrasco'\n  ]\n};\n\nlet categoria = '';\n\nfor (const [nome, termos] of Object.entries(categorias)) {\n  if (termos.some(t => query.includes(t))) {\n    categoria = nome;\n    break;\n  }\n}\n\n// Se não encontrou no mapa, usa a categoria original\nif (!categoria) {\n  categoria = input.trim();\n}\n\nreturn [{ json: { query, categoria } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [96, 0],
+      "id": "9898ec2e-4f10-4d5f-881c-3735e8371b78",
+      "name": "Normalizar Categoria"
+    },
+    {
+      "parameters": {
+        "url": "=https://zziapgnenvugyvrgrhrs.supabase.co/rest/v1/produtos?select=id,nome,preco_atual,unidade&categoria=ilike.*{{ encodeURIComponent($json.categoria || '') }}*&ativo=eq.true&order=nome.asc&limit=30",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
@@ -35,8 +46,8 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [460, 300],
-      "id": "f9-query",
+      "position": [336, 0],
+      "id": "5e167336-30ff-497d-9ba2-12b99c2613d6",
       "name": "Buscar por Categoria",
       "credentials": {
         "supabaseApi": {
@@ -47,26 +58,148 @@
     },
     {
       "parameters": {
-        "jsCode": "const categoria = $('Receber Categoria').first().json.categoria || '';\nconst resultados = $input.first().json;\n\nconst lista = Array.isArray(resultados) ? resultados : [];\n\nif (lista.length === 0) {\n  return [{\n    json: {\n      resultado: `Nenhum produto encontrado na categoria \"${categoria}\".`,\n      produtos: []\n    }\n  }];\n}\n\nconst formatarPreco = (v) =>\n  Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });\n\nconst linhas = lista.map((p) => {\n  const disponivel = Number(p.estoque_atual || 0) > 0;\n  const status = disponivel ? 'disponível' : 'sem estoque';\n  const preco = formatarPreco(p.preco_atual || 0);\n  const unidade = p.unidade || 'un';\n  return `- ${p.nome}: ${preco}/${unidade} (${status})`;\n});\n\nreturn [{\n  json: {\n    resultado: `Produtos da categoria ${categoria}:\\n` + linhas.join('\\n'),\n    produtos: lista.map((p) => ({\n      produto_id: p.id || '',\n      nome: p.nome || '',\n      preco_unitario: Number(p.preco_atual || 0),\n      unidade: p.unidade || 'un',\n      estoque: Number(p.estoque_atual || 0)\n    }))\n  }\n}];"
+        "jsCode": "const categoria = $('Receber Categoria').first().json.categoria || '';\n\nconst lista = $input.all().map(item => item.json);\n\nif (lista.length === 0) {\n  return [{\n    json: {\n      resultado: `Nenhum produto encontrado na categoria \"${categoria}\".`,\n      produtos: []\n    }\n  }];\n}\n\nconst fmt = (v) =>\n  Number(v || 0).toLocaleString('pt-BR', {\n    style: 'currency',\n    currency: 'BRL'\n  });\n\nconst limparNome = (nome) => {\n  if (categoria.toLowerCase() === 'ofertas') {\n    return (nome || '')\n      .replace(/\\bOferta\\b/gi, '')\n      .trim();\n  }\n  return nome || '';\n};\n\n// ativo=eq.true já garante que só produtos disponíveis chegam aqui.\nconst linhas = lista.map((p) => {\n  const nomeLimpo = limparNome(p.nome);\n  return `- ${nomeLimpo}: ${fmt(p.preco_atual)}/${p.unidade || 'un'}`;\n});\n\nconst nome = $('Receber Categoria').first().json.nome_cliente || '';\n\nconst gatilhos = [\n  nome ? `${nome}, tem interesse em algum? E so me dizer a quantidade que separo para voce!` : `Tem interesse em algum? E so me dizer a quantidade que separo para voce!`,\n  nome ? `${nome}, esses produtos estao saindo bastante hoje. Qual deles voce quer garantir?` : `Esses produtos estao saindo bastante hoje. Qual deles voce quer garantir?`,\n  nome ? `${nome}, posso separar agora para voce. Qual voce quer e em que quantidade?` : `Posso separar agora para voce. Qual voce quer e em que quantidade?`,\n  nome ? `${nome}, nossos clientes adoram esses produtos. Qual deles te interessa?` : `Nossos clientes adoram esses produtos. Qual deles te interessa?`,\n  nome ? `${nome}, aproveita que estao disponiveis agora. Me diz qual e a quantidade!` : `Aproveita que estao disponiveis agora. Me diz qual e a quantidade!`,\n  nome ? `${nome}, quem experimenta sempre volta. Qual desses voce quer reservar?` : `Quem experimenta sempre volta. Qual desses voce quer reservar?`,\n  nome ? `${nome}, e so escolher um que ja separo para voce ainda hoje!` : `E so escolher um que ja separo para voce ainda hoje!`,\n  nome ? `${nome}, esses sao os favoritos dos nossos clientes. Qual voce quer levar?` : `Esses sao os favoritos dos nossos clientes. Qual voce quer levar?`,\n  nome ? `${nome}, posso deixar tudo pronto para voce. Qual desses te agrada mais?` : `Posso deixar tudo pronto para voce. Qual desses te agrada mais?`,\n  nome ? `${nome}, nao perde essa oportunidade! Me diz qual voce quer e em que quantidade.` : `Nao perde essa oportunidade! Me diz qual voce quer e em que quantidade.`\n];\n\nconst gatilho = gatilhos[Math.floor(Math.random() * gatilhos.length)];\nconst cta = `\\n\\n${gatilho}`;\n\nreturn [{\n  json: {\n    resultado:\n      `Produtos da categoria ${categoria}:\\n` +\n      linhas.join('\\n') + cta,\n\n    produtos: lista.map((p) => ({\n      produto_id: p.id || '',\n      nome: limparNome(p.nome),\n      preco_unitario: Number(p.preco_atual || 0),\n      unidade: p.unidade || 'un'\n    }))\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300],
-      "id": "f9-formatar",
+      "position": [560, 0],
+      "id": "c2b0c1f6-5745-491a-bc02-85deadd87762",
       "name": "Formatar Resultado"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }}",
+        "options": {
+          "systemMessage": "=Você é o vendedor especialista do Mercado Araujo no WhatsApp.\n\nSua função é apresentar OFERTAS, PROMOÇÕES e KITS DE CHURRASCO de forma NATURAL, HUMANA e PERSUASIVA.\n\nIMPORTANTE:\n- Nunca invente preços\n- Nunca invente produtos\n- Use SOMENTE os produtos recebidos no JSON\n- Nunca responda em markdown\n- Nunca use emojis\n- Seja curto, vendedor e natural\n- Fale como atendente real de açougue/mercado premium\n- Todos os produtos listados estão disponíveis (ativos)\n- Sempre incentive continuidade da conversa\n- Gere desejo e urgência leve sem exagero\n\nCOMPORTAMENTO:\n- Se houver nome do cliente, use naturalmente\n- Destaque os produtos mais atrativos\n- Use linguagem comercial brasileira natural\n- Sugira complementar produtos quando fizer sentido\n- Estimule fechamento do pedido\n\nESTILO:\n- Conversa fluida\n- Natural\n- WhatsApp real\n- Sem cara de robô\n- Sem listas gigantes\n- Sem excesso de texto\n\nGATILHOS QUE PODE USAR:\n- \"está saindo bastante hoje\"\n- \"esse kit tem bastante procura\"\n- \"vale muito a pena\"\n- \"nossos clientes costumam levar\"\n- \"ainda temos disponibilidade\"\n- \"consigo separar pra você agora\"\n\nREGRAS IMPORTANTES:\n\n1. Quando for OFERTA:\n- Destaque variedade\n- Destaque promoção\n- Convide o cliente a escolher\n\n2. Quando for KIT:\n- Destaque praticidade\n- Destaque custo-benefício\n- Sugira ocasião:\n  - churrasco família\n  - fim de semana\n  - reunião\n  - confraternização\n\n3. Sempre termine incentivando ação:\nExemplos:\n- \"Quer que eu já separe pra você?\"\n- \"Posso montar seu pedido agora?\"\n- \"Qual desses você quer aproveitar hoje?\"\n- \"Quer que eu te envie os kits mais pedidos?\"\n\nDADOS RECEBIDOS:\n{{ JSON.stringify($json) }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [768, 0],
+      "id": "ac8934e4-ab09-42ba-adc3-e93a8d5be9db",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [640, 208],
+      "id": "49ad0d72-d57e-4f37-bacd-3b9a7df76b6c",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "w8nIui9qhEXhVDh4",
+          "name": "OpenAI 1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Receber Categoria').item.json.telefone }}",
+        "contextWindowLength": 4
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [784, 208],
+      "id": "0fc3c366-3cf8-48bb-9cf9-19e614a85b79",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "W57rnU1UrDOiVkzE",
+          "name": "Postgres Supabase"
+        }
+      }
     }
   ],
   "connections": {
     "Receber Categoria": {
-      "main": [[{ "node": "Buscar por Categoria", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Normalizar Categoria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Categoria": {
+      "main": [
+        [
+          {
+            "node": "Buscar por Categoria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Buscar por Categoria": {
-      "main": [[{ "node": "Formatar Resultado", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Formatar Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Resultado": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": true,
-  "settings": {
-    "executionOrder": "v1"
+  "pinData": {
+    "Receber Categoria": [
+      {
+        "categoria": "ofertas",
+        "nome_cliente": "Emerson",
+        "telefone": "5513981085275"
+      }
+    ]
   },
-  "tags": []
+  "meta": {
+    "instanceId": "dbc381b341b27c8eb54462163acf41a1eabfb2a77579172f7e0e72e41d42e0b3"
+  }
 }

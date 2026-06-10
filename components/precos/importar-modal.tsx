@@ -18,6 +18,7 @@ interface LinhaPrevia {
   unidade: string | null;
   preco_atual: number | null;
   categoria: string | null;
+  nicho: string | null;
   validade: string | null;
   erro: string | null;
 }
@@ -25,6 +26,26 @@ interface LinhaPrevia {
 function parseNumero(v: unknown): number | null {
   const n = parseFloat(String(v).replace(",", "."));
   return isNaN(n) || n < 0 ? null : n;
+}
+
+// Nichos aceitos — definem em qual seção do SITE o item aparece.
+// Valores fora desta lista deixariam o item invisível no site.
+const NICHOS_VALIDOS = ["acougue", "padaria", "churrasco"] as const;
+
+function parseNicho(v: unknown): { valor: string | null; erro: string | null } {
+  const raw = String(v ?? "").trim();
+  if (!raw) return { valor: null, erro: null };
+  const norm = raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+  if (!(NICHOS_VALIDOS as readonly string[]).includes(norm)) {
+    return {
+      valor: null,
+      erro: `nicho "${raw}" inválido — use exatamente: acougue, padaria ou churrasco (ou deixe vazio para produtos comuns)`,
+    };
+  }
+  return { valor: norm, erro: null };
 }
 
 async function parseArquivo(file: File, produtosRef: Produto[]): Promise<LinhaPrevia[]> {
@@ -49,19 +70,23 @@ async function parseArquivo(file: File, produtosRef: Produto[]): Promise<LinhaPr
 
   return rows.map((row) => {
     const nome = String(row["nome"] ?? row["Nome"] ?? "").trim();
-    if (!nome) return { nome: "(vazio)", unidade: null, preco_atual: null, categoria: null, validade: null, erro: "Nome obrigatório" };
+    if (!nome) return { nome: "(vazio)", unidade: null, preco_atual: null, categoria: null, nicho: null, validade: null, erro: "Nome obrigatório" };
 
     const unidade = String(row["unidade"] ?? row["Unidade"] ?? "").trim() || null;
-    if (!unidade) return { nome, unidade: null, preco_atual: null, categoria: null, validade: null, erro: "Unidade obrigatória (ex: kg, unidade, pacote)" };
+    if (!unidade) return { nome, unidade: null, preco_atual: null, categoria: null, nicho: null, validade: null, erro: "Unidade obrigatória (ex: kg, unidade, pacote)" };
 
     const preco_atual = parseNumero(row["preco_atual"] ?? row["Preço Atual"] ?? row["preco"] ?? row["Preco"]);
 
-    if (preco_atual === null) return { nome, unidade, preco_atual: null, categoria: null, validade: null, erro: "preco_atual inválido (deve ser número >= 0)" };
+    if (preco_atual === null) return { nome, unidade, preco_atual: null, categoria: null, nicho: null, validade: null, erro: "preco_atual inválido (deve ser número >= 0)" };
 
     const categoria = String(row["categoria"] ?? row["Categoria"] ?? "").trim() || null;
+
+    const nichoParse = parseNicho(row["nicho"] ?? row["Nicho"]);
+    if (nichoParse.erro) return { nome, unidade, preco_atual, categoria, nicho: null, validade: null, erro: nichoParse.erro };
+
     const validade = String(row["validade"] ?? row["Validade"] ?? "").trim() || null;
 
-    return { nome, unidade, preco_atual, categoria, validade, erro: null };
+    return { nome, unidade, preco_atual, categoria, nicho: nichoParse.valor, validade, erro: null };
   });
 }
 
@@ -103,6 +128,7 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
       unidade: l.unidade!,
       preco_atual: l.preco_atual!,
       categoria: l.categoria,
+      nicho: l.nicho,
       validade: l.validade,
     }));
     setPending(true);
@@ -139,9 +165,17 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">unidade</code>,{" "}
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">preco_atual</code>,{" "}
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">categoria</code>,{" "}
+                <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">nicho</code>,{" "}
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">validade</code>.
-                {" "}Esta importação <strong>substitui todo o catálogo</strong>: produtos da planilha serão criados ou atualizados, e os que não estiverem na planilha serão removidos. Itens com categoria <em>ofertas</em> ou <em>kits</em> aparecem na página Ofertas e Kits e não são removidos pela importação (exclua-os por lá). As colunas <em>categoria</em> e <em>validade</em> são opcionais.
+                {" "}Esta importação <strong>substitui todo o catálogo</strong>: produtos da planilha serão criados ou atualizados, e os que não estiverem na planilha serão removidos. Itens com categoria <em>ofertas</em> ou <em>kits</em> aparecem na página Ofertas e Kits e não são removidos pela importação (exclua-os por lá). As colunas <em>categoria</em>, <em>nicho</em> e <em>validade</em> são opcionais.
               </p>
+              <div className="text-xs text-muted bg-surface-subtle border border-border rounded-lg p-3 space-y-1">
+                <p className="font-semibold text-foreground">Coluna nicho — define a seção do SITE onde o item aparece:</p>
+                <p><code className="px-1 py-0.5 bg-surface rounded">acougue</code> → seção Ofertas Açougue (para itens com categoria <em>ofertas</em>)</p>
+                <p><code className="px-1 py-0.5 bg-surface rounded">padaria</code> → seção Ofertas Padaria (para itens com categoria <em>ofertas</em>)</p>
+                <p><code className="px-1 py-0.5 bg-surface rounded">churrasco</code> → seção Kits Churrasco (para itens com categoria <em>kits</em>)</p>
+                <p>Deixe <strong>vazio</strong> para produtos comuns do catálogo. Qualquer outra palavra será rejeitada na importação. Se a coluna vier vazia em um item que já tem nicho, o valor atual é mantido.</p>
+              </div>
               <button
                 type="button"
                 onClick={async () => {
@@ -151,6 +185,7 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
                     unidade: p.unidade,
                     preco_atual: p.preco_atual,
                     categoria: p.categoria ?? "",
+                    nicho: p.nicho ?? "",
                     validade: p.validade ?? "",
                   }));
                   const ws = XLSX.utils.json_to_sheet(linhas);
@@ -196,6 +231,7 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
                         <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Unidade</th>
                         <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Preço</th>
                         <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Categoria</th>
+                        <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Nicho</th>
                         <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Validade</th>
                       </tr>
                     </thead>
@@ -206,6 +242,7 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
                           <td className="px-3 py-2 text-muted">{l.unidade}</td>
                           <td className="px-3 py-2 text-foreground">{formatMoeda(l.preco_atual!)}</td>
                           <td className="px-3 py-2 text-muted">{l.categoria ?? "—"}</td>
+                          <td className="px-3 py-2 text-muted">{l.nicho ?? "—"}</td>
                           <td className="px-3 py-2 text-muted">{l.validade ?? "—"}</td>
                         </tr>
                       ))}

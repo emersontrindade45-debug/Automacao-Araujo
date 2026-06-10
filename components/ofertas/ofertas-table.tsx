@@ -19,6 +19,24 @@ const TIPO_BADGE: Record<string, string> = {
   kit: "bg-emerald-100 text-emerald-700",
 };
 
+// Nicho define a seção do SITE onde o item aparece.
+// Dropdown fechado: valores fora desta lista deixariam o item invisível no site.
+const NICHO_OPTIONS = [
+  { value: "acougue", label: "Açougue (site)" },
+  { value: "padaria", label: "Padaria (site)" },
+  { value: "churrasco", label: "Churrasco (site)" },
+] as const;
+
+const NICHO_LABEL: Record<string, string> = {
+  acougue: "Açougue",
+  padaria: "Padaria",
+  churrasco: "Churrasco",
+};
+
+function nichoPadrao(tipo: string): string {
+  return tipo === "kit" ? "churrasco" : "acougue";
+}
+
 const VAZIO: Omit<Produto, "id" | "criado_em"> = {
   nome: "",
   preco_atual: 0,
@@ -28,7 +46,7 @@ const VAZIO: Omit<Produto, "id" | "criado_em"> = {
   validade: "",
   categoria: "ofertas",
   ativo: true,
-  nicho: null,
+  nicho: "acougue",
   imagem_url: null,
 };
 
@@ -62,6 +80,7 @@ export function OfertasTable({ itens }: Props) {
         descricao: editForm.descricao ?? null,
         validade: editForm.validade ?? null,
         ativo: editForm.ativo ?? true,
+        nicho: editForm.nicho ?? nichoPadrao(editForm.tipo ?? "oferta"),
       });
       cancelarEdicao();
     });
@@ -78,6 +97,7 @@ export function OfertasTable({ itens }: Props) {
         validade: novoForm.validade || null,
         categoria: novoForm.tipo === "kit" ? "kits" : "ofertas",
         ativo: true,
+        nicho: novoForm.nicho ?? nichoPadrao(novoForm.tipo),
       });
       setCriando(false);
       setNovoForm({ ...VAZIO });
@@ -150,14 +170,29 @@ export function OfertasTable({ itens }: Props) {
                   />
                 </td>
                 <td className="px-4 py-2 hidden sm:table-cell">
-                  <select
-                    className="border border-border rounded-md px-2 py-1 text-sm bg-surface"
-                    value={novoForm.tipo}
-                    onChange={(e) => setNovoForm({ ...novoForm, tipo: e.target.value as TipoProduto })}
-                  >
-                    <option value="oferta">Oferta</option>
-                    <option value="kit">Kit</option>
-                  </select>
+                  <div className="flex flex-col gap-1">
+                    <select
+                      className="border border-border rounded-md px-2 py-1 text-sm bg-surface"
+                      value={novoForm.tipo}
+                      onChange={(e) => {
+                        const tipo = e.target.value as TipoProduto;
+                        setNovoForm({ ...novoForm, tipo, nicho: nichoPadrao(tipo) });
+                      }}
+                    >
+                      <option value="oferta">Oferta</option>
+                      <option value="kit">Kit</option>
+                    </select>
+                    <select
+                      className="border border-border rounded-md px-2 py-1 text-xs bg-surface"
+                      value={novoForm.nicho ?? nichoPadrao(novoForm.tipo)}
+                      onChange={(e) => setNovoForm({ ...novoForm, nicho: e.target.value })}
+                      title="Seção do site onde o item aparece"
+                    >
+                      {NICHO_OPTIONS.map((n) => (
+                        <option key={n.value} value={n.value}>{n.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </td>
                 <td className="px-4 py-2">
                   <div className="flex items-center gap-1">
@@ -238,9 +273,21 @@ export function OfertasTable({ itens }: Props) {
                       />
                     </td>
                     <td className="px-4 py-2 hidden sm:table-cell">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${TIPO_BADGE[item.tipo]}`}>
-                        {TIPO_LABEL[item.tipo]}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${TIPO_BADGE[item.tipo]}`}>
+                          {TIPO_LABEL[item.tipo]}
+                        </span>
+                        <select
+                          className="border border-border rounded-md px-2 py-1 text-xs bg-surface"
+                          value={editForm.nicho ?? nichoPadrao(item.tipo)}
+                          onChange={(e) => setEditForm({ ...editForm, nicho: e.target.value })}
+                          title="Seção do site onde o item aparece"
+                        >
+                          {NICHO_OPTIONS.map((n) => (
+                            <option key={n.value} value={n.value}>{n.label}</option>
+                          ))}
+                        </select>
+                      </div>
                     </td>
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-1">
@@ -308,9 +355,14 @@ export function OfertasTable({ itens }: Props) {
                   <>
                     <td className="px-4 py-3 font-medium text-foreground">{item.nome}</td>
                     <td className="px-4 py-3 hidden sm:table-cell">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${TIPO_BADGE[item.tipo]}`}>
-                        {TIPO_LABEL[item.tipo]}
-                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${TIPO_BADGE[item.tipo]}`}>
+                          {TIPO_LABEL[item.tipo]}
+                        </span>
+                        <span className="text-[10px] text-muted">
+                          {item.nicho ? `Site: ${NICHO_LABEL[item.nicho] ?? item.nicho}` : "Fora do site"}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-foreground">
                       R$ {Number(item.preco_atual).toFixed(2).replace(".", ",")}

@@ -54,6 +54,7 @@ export interface LinhaPlanilha {
   unidade: string;
   preco_atual: number;
   categoria: string | null;
+  nicho: string | null;
   validade: string | null;
 }
 
@@ -79,6 +80,7 @@ export interface OfertaKitPayload {
   validade: string | null;
   categoria: string;
   ativo: boolean;
+  nicho: string | null;
 }
 
 export async function criarOfertaKit(payload: OfertaKitPayload) {
@@ -126,7 +128,7 @@ export async function upsertProdutosEmLote(linhas: LinhaPlanilha[]) {
   const supabase = createAdminClient();
 
   await Promise.all(
-    linhas.map(({ nome, unidade, preco_atual, categoria, validade }) => {
+    linhas.map(({ nome, unidade, preco_atual, categoria, nicho, validade }) => {
       const categoriaNorm = categoria?.trim().toLowerCase() || null;
       return supabase
         .from("produtos")
@@ -139,6 +141,9 @@ export async function upsertProdutosEmLote(linhas: LinhaPlanilha[]) {
             tipo: tipoDaCategoria(categoriaNorm),
             categoria: categoriaNorm,
             validade: validade || null,
+            // nicho vazio na planilha NÃO apaga o nicho existente —
+            // só atualiza quando preenchido (acougue/padaria/churrasco)
+            ...(nicho ? { nicho } : {}),
           },
           { onConflict: "nome", ignoreDuplicates: false }
         )

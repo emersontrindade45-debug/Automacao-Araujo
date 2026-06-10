@@ -37,6 +37,11 @@ function nichoPadrao(tipo: string): string {
   return tipo === "kit" ? "churrasco" : "acougue";
 }
 
+// Aceita vírgula ou ponto como separador decimal (ex: "12,50" ou "12.50")
+function parsePreco(v: string): number {
+  return parseFloat(v.trim().replace(",", "."));
+}
+
 const VAZIO: Omit<Produto, "id" | "criado_em"> = {
   nome: "",
   preco_atual: 0,
@@ -56,6 +61,9 @@ export function OfertasTable({ itens }: Props) {
   const [editForm, setEditForm] = useState<Partial<Produto>>({});
   const [criando, setCriando] = useState(false);
   const [novoForm, setNovoForm] = useState({ ...VAZIO });
+  // Preços como texto durante a digitação para aceitar vírgula (12,50)
+  const [novoPrecoTxt, setNovoPrecoTxt] = useState("");
+  const [editPrecoTxt, setEditPrecoTxt] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const visíveis = itens.filter((i) => filtro === "todos" || i.tipo === filtro);
@@ -63,6 +71,7 @@ export function OfertasTable({ itens }: Props) {
   function iniciarEdicao(item: Produto) {
     setEditandoId(item.id);
     setEditForm({ ...item });
+    setEditPrecoTxt(String(item.preco_atual).replace(".", ","));
   }
 
   function cancelarEdicao() {
@@ -75,7 +84,7 @@ export function OfertasTable({ itens }: Props) {
     startTransition(async () => {
       await atualizarOfertaKitAction(editandoId, {
         nome: editForm.nome,
-        preco_atual: Number(editForm.preco_atual),
+        preco_atual: parsePreco(editPrecoTxt),
         unidade: editForm.unidade ?? "kg",
         descricao: editForm.descricao ?? null,
         validade: editForm.validade ?? null,
@@ -90,7 +99,7 @@ export function OfertasTable({ itens }: Props) {
     startTransition(async () => {
       await criarOfertaKitAction({
         nome: novoForm.nome,
-        preco_atual: Number(novoForm.preco_atual),
+        preco_atual: parsePreco(novoPrecoTxt),
         unidade: novoForm.unidade,
         tipo: novoForm.tipo as TipoProduto,
         descricao: novoForm.descricao || null,
@@ -101,6 +110,7 @@ export function OfertasTable({ itens }: Props) {
       });
       setCriando(false);
       setNovoForm({ ...VAZIO });
+      setNovoPrecoTxt("");
     });
   }
 
@@ -205,12 +215,12 @@ export function OfertasTable({ itens }: Props) {
                   <div className="flex items-center gap-1">
                     <span className="text-muted text-xs">R$</span>
                     <input
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       className="w-24 border border-border rounded-md px-2 py-1 text-sm bg-surface"
                       placeholder="0,00"
-                      value={novoForm.preco_atual}
-                      onChange={(e) => setNovoForm({ ...novoForm, preco_atual: Number(e.target.value) })}
+                      value={novoPrecoTxt}
+                      onChange={(e) => setNovoPrecoTxt(e.target.value)}
                     />
                     <select
                       className="border border-border rounded-md px-2 py-1 text-sm bg-surface"
@@ -244,13 +254,13 @@ export function OfertasTable({ itens }: Props) {
                   <div className="flex gap-2 justify-end">
                     <button
                       onClick={salvarNovo}
-                      disabled={isPending || !novoForm.nome}
+                      disabled={isPending || !novoForm.nome || isNaN(parsePreco(novoPrecoTxt)) || parsePreco(novoPrecoTxt) < 0}
                       className="text-xs px-2 py-1 rounded bg-brand text-white font-medium hover:bg-brand/90 disabled:opacity-50"
                     >
                       Salvar
                     </button>
                     <button
-                      onClick={() => setCriando(false)}
+                      onClick={() => { setCriando(false); setNovoForm({ ...VAZIO }); setNovoPrecoTxt(""); }}
                       className="text-xs px-2 py-1 rounded bg-surface-subtle text-muted hover:text-foreground"
                     >
                       Cancelar
@@ -300,11 +310,12 @@ export function OfertasTable({ itens }: Props) {
                       <div className="flex items-center gap-1">
                         <span className="text-muted text-xs">R$</span>
                         <input
-                          type="number"
-                          step="0.01"
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0,00"
                           className="w-24 border border-border rounded-md px-2 py-1 text-sm bg-surface"
-                          value={editForm.preco_atual ?? 0}
-                          onChange={(e) => setEditForm({ ...editForm, preco_atual: Number(e.target.value) })}
+                          value={editPrecoTxt}
+                          onChange={(e) => setEditPrecoTxt(e.target.value)}
                         />
                         <select
                           className="border border-border rounded-md px-2 py-1 text-sm bg-surface"
@@ -344,7 +355,7 @@ export function OfertasTable({ itens }: Props) {
                       <div className="flex gap-2 justify-end">
                         <button
                           onClick={salvarEdicao}
-                          disabled={isPending}
+                          disabled={isPending || isNaN(parsePreco(editPrecoTxt)) || parsePreco(editPrecoTxt) < 0}
                           className="text-xs px-2 py-1 rounded bg-brand text-white font-medium hover:bg-brand/90 disabled:opacity-50"
                         >
                           Salvar

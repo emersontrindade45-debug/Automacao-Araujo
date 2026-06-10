@@ -16,8 +16,13 @@ function formatMoeda(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+// Aceita vírgula ou ponto como separador decimal (ex: "12,50" ou "12.50")
+function parsePreco(v: string): number {
+  return parseFloat(v.trim().replace(",", "."));
+}
+
 interface EditState {
-  preco_atual: number;
+  preco_atual: string;
   ativo: boolean;
 }
 
@@ -77,8 +82,8 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
     return produtos.filter((p) => {
       if (filtros.nome && !p.nome.toLowerCase().includes(filtros.nome.toLowerCase())) return false;
       if (filtros.unidade && p.unidade !== filtros.unidade) return false;
-      if (filtros.precoMin !== "" && p.preco_atual < parseFloat(filtros.precoMin)) return false;
-      if (filtros.precoMax !== "" && p.preco_atual > parseFloat(filtros.precoMax)) return false;
+      if (filtros.precoMin !== "" && p.preco_atual < parsePreco(filtros.precoMin)) return false;
+      if (filtros.precoMax !== "" && p.preco_atual > parsePreco(filtros.precoMax)) return false;
       if (filtros.ativo !== "" && String(p.ativo) !== filtros.ativo) return false;
       return true;
     });
@@ -97,7 +102,7 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
   function iniciarEdicao(produto: Produto) {
     setEditandoId(produto.id);
     setEditValues({
-      preco_atual: produto.preco_atual,
+      preco_atual: String(produto.preco_atual).replace(".", ","),
       ativo: produto.ativo,
     });
   }
@@ -110,7 +115,7 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
   function salvarEdicao(id: string) {
     if (!editValues) return;
     const payload = {
-      preco_atual: editValues.preco_atual,
+      preco_atual: parsePreco(editValues.preco_atual),
       ativo: editValues.ativo,
     };
     setProdutos((prev) =>
@@ -173,9 +178,8 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
           {/* Preço */}
           <div className="flex items-center gap-1">
             <input
-              type="number"
-              min="0"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               placeholder="Preço mín"
               value={filtros.precoMin}
               onChange={(e) => setFiltro("precoMin", e.target.value)}
@@ -183,9 +187,8 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
             />
             <span className="text-xs text-muted">–</span>
             <input
-              type="number"
-              min="0"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               placeholder="Preço máx"
               value={filtros.precoMax}
               onChange={(e) => setFiltro("precoMax", e.target.value)}
@@ -254,7 +257,7 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
             {filtrados.map((produto) => {
               const emEdicao = editandoId === produto.id;
               const valoresEdicao = emEdicao ? editValues! : null;
-              const precoInvalido = valoresEdicao !== null && (isNaN(valoresEdicao.preco_atual) || valoresEdicao.preco_atual < 0);
+              const precoInvalido = valoresEdicao !== null && (isNaN(parsePreco(valoresEdicao.preco_atual)) || parsePreco(valoresEdicao.preco_atual) < 0);
 
               return (
                 <tr key={produto.id} className="border-b border-border last:border-0 hover:bg-surface-subtle transition-colors group">
@@ -264,11 +267,11 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
                   <td className="px-3 py-2.5">
                     {emEdicao ? (
                       <input
-                        type="number"
-                        min="0"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0,00"
                         value={valoresEdicao!.preco_atual}
-                        onChange={(e) => setEditValues((v) => v ? { ...v, preco_atual: parseFloat(e.target.value) } : v)}
+                        onChange={(e) => setEditValues((v) => v ? { ...v, preco_atual: e.target.value } : v)}
                         className="w-full border border-brand rounded-md px-2 py-1 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-brand"
                       />
                     ) : (

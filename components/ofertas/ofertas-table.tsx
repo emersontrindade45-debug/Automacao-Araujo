@@ -104,6 +104,13 @@ export function OfertasTable({ itens }: Props) {
     });
   }
 
+  // Liga/desliga o item direto da listagem — reflete no site na hora
+  function alternarAtivo(item: Produto) {
+    startTransition(async () => {
+      await atualizarOfertaKitAction(item.id, { ativo: !item.ativo });
+    });
+  }
+
   function confirmarDelete(item: Produto) {
     if (!confirm(`Excluir "${item.nome}"?`)) return;
     startTransition(async () => {
@@ -375,7 +382,23 @@ export function OfertasTable({ itens }: Props) {
                       {item.validade ?? "—"}
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell">
-                      <span className={`inline-block h-2 w-2 rounded-full ${item.ativo ? "bg-emerald-500" : "bg-zinc-300"}`} />
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={item.ativo}
+                        title={item.ativo ? "Ativo — clique para desativar" : "Inativo — clique para ativar"}
+                        disabled={isPending}
+                        onClick={() => alternarAtivo(item)}
+                        className={[
+                          "relative inline-flex h-5 w-9 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50",
+                          item.ativo ? "bg-emerald-500" : "bg-border",
+                        ].join(" ")}
+                      >
+                        <span className={[
+                          "inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform mt-0.5",
+                          item.ativo ? "translate-x-4" : "translate-x-0.5",
+                        ].join(" ")} />
+                      </button>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2 justify-end">

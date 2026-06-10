@@ -7,7 +7,8 @@ const ALERTA_THRESHOLD = LIMITE_DIARIO_USD * ALERTA_PERCENTUAL; // $0.152
 
 const DEV_WHATSAPP = process.env.DEV_WHATSAPP ?? "5513988647356";
 const EVOLUTION_URL = process.env.EVOLUTION_API_URL ?? "https://evo.evoapi.shop";
-const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY ?? "221ad739-d54f-4024-b870-d40055904167";
+// Sem fallback hardcoded — chave só via env (repo é público)
+const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY ?? "";
 const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE ?? "Araujo";
 
 async function buscarCustoHoje(): Promise<number> {

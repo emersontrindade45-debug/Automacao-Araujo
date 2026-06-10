@@ -1,4 +1,9 @@
-const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5NjIzYTIxNi01NTdkLTRiMTgtYjllNC1kYzA3NmVhN2Y1MDMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiMjVlNjlhZjMtNzAwNC00MGIzLThlOWYtMWFlOGEzY2FhNjNlIiwiaWF0IjoxNzc4NTQyNTQ1fQ.jfnAW-6B1JQJ2krGT1PVIjFc80dP3nh1aAVGDubnK8U';
+// Chave só via env (repo é público): defina N8N_API_KEY antes de rodar
+const API_KEY = process.env.N8N_API_KEY;
+if (!API_KEY) {
+  console.error('Defina a variavel de ambiente N8N_API_KEY antes de rodar este script.');
+  process.exit(1);
+}
 const wf = require('../../fluxo1_fix3.json');
 
 // Código correto — sem template literals para evitar problemas de escape

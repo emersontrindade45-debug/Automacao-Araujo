@@ -3,8 +3,8 @@ import type { Etapa, ItemPedido } from "@/lib/types";
 
 const EVOLUTION_URL =
   process.env.EVOLUTION_API_URL ?? "https://evo.evoapi.shop";
-const EVOLUTION_KEY =
-  process.env.EVOLUTION_API_KEY ?? "221ad739-d54f-4024-b870-d40055904167";
+// Sem fallback hardcoded — chave só via env (repo é público)
+const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY ?? "";
 const EVOLUTION_INSTANCE =
   process.env.EVOLUTION_INSTANCE ?? "Araujo";
 const GRUPO_JID =

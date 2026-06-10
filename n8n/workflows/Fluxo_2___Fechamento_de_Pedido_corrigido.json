@@ -183,7 +183,7 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "221ad739-d54f-4024-b870-d40055904167"
+              "value": "SUBSTITUA_PELA_EVOLUTION_API_KEY"
             }
           ]
         },
@@ -210,7 +210,7 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "221ad739-d54f-4024-b870-d40055904167"
+              "value": "SUBSTITUA_PELA_EVOLUTION_API_KEY"
             }
           ]
         },

@@ -368,7 +368,7 @@ deploy().catch(console.error);
 - [ ] **Step 2: Executar o deploy**
 
 ```bash
-N8N_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5NjIzYTIxNi01NTdkLTRiMTgtYjllNC1kYzA3NmVhN2Y1MDMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiMjVlNjlhZjMtNzAwNC00MGIzLThlOWYtMWFlOGEzY2FhNjNlIiwiaWF0IjoxNzc4NTQyNTQ1fQ.jfnAW-6B1JQJ2krGT1PVIjFc80dP3nh1aAVGDubnK8U node n8n/scripts/deploy-classificar-rag.js
+N8N_API_KEY=<SUA_N8N_API_KEY> node n8n/scripts/deploy-classificar-rag.js
 ```
 
 Resultado esperado:

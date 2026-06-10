@@ -121,6 +121,18 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
     startTransition(() => editarProdutoAction(id, payload));
   }
 
+  // Liga/desliga o produto direto da listagem, sem entrar no modo edição
+  function alternarAtivo(produto: Produto) {
+    const payload = {
+      preco_atual: produto.preco_atual,
+      ativo: !produto.ativo,
+    };
+    setProdutos((prev) =>
+      prev.map((p) => (p.id === produto.id ? { ...p, ...payload } : p))
+    );
+    startTransition(() => editarProdutoAction(produto.id, payload));
+  }
+
   function onImportarConcluido(atualizados: import("@/lib/supabase/queries/produtos").LinhaPlanilha[]) {
     setProdutos((prev) =>
       prev.map((p) => {
@@ -281,7 +293,7 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
                           valoresEdicao!.ativo ? "translate-x-4" : "translate-x-0.5",
                         ].join(" ")} />
                       </button>
-                    ) : (
+                    ) : somenteLeitura ? (
                       <span className={[
                         "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full",
                         produto.ativo
@@ -291,6 +303,24 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
                         <span className={["h-1.5 w-1.5 rounded-full", produto.ativo ? "bg-success" : "bg-muted"].join(" ")} />
                         {produto.ativo ? "Ativo" : "Inativo"}
                       </span>
+                    ) : (
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={produto.ativo}
+                        title={produto.ativo ? "Ativo — clique para desativar" : "Inativo — clique para ativar"}
+                        disabled={pending}
+                        onClick={() => alternarAtivo(produto)}
+                        className={[
+                          "relative inline-flex h-5 w-9 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50",
+                          produto.ativo ? "bg-emerald-500" : "bg-border",
+                        ].join(" ")}
+                      >
+                        <span className={[
+                          "inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform mt-0.5",
+                          produto.ativo ? "translate-x-4" : "translate-x-0.5",
+                        ].join(" ")} />
+                      </button>
                     )}
                   </td>
 

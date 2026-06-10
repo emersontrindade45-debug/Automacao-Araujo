@@ -17,7 +17,6 @@ interface LinhaPrevia {
   nome: string;
   unidade: string | null;
   preco_atual: number | null;
-  estoque_atual: number | null;
   categoria: string | null;
   validade: string | null;
   erro: string | null;
@@ -50,21 +49,19 @@ async function parseArquivo(file: File, produtosRef: Produto[]): Promise<LinhaPr
 
   return rows.map((row) => {
     const nome = String(row["nome"] ?? row["Nome"] ?? "").trim();
-    if (!nome) return { nome: "(vazio)", unidade: null, preco_atual: null, estoque_atual: null, categoria: null, validade: null, erro: "Nome obrigatório" };
+    if (!nome) return { nome: "(vazio)", unidade: null, preco_atual: null, categoria: null, validade: null, erro: "Nome obrigatório" };
 
     const unidade = String(row["unidade"] ?? row["Unidade"] ?? "").trim() || null;
-    if (!unidade) return { nome, unidade: null, preco_atual: null, estoque_atual: null, categoria: null, validade: null, erro: "Unidade obrigatória (ex: kg, unidade, pacote)" };
+    if (!unidade) return { nome, unidade: null, preco_atual: null, categoria: null, validade: null, erro: "Unidade obrigatória (ex: kg, unidade, pacote)" };
 
     const preco_atual = parseNumero(row["preco_atual"] ?? row["Preço Atual"] ?? row["preco"] ?? row["Preco"]);
-    const estoque_atual = parseNumero(row["estoque_atual"] ?? row["Estoque Atual"] ?? row["estoque"] ?? row["Estoque"]);
 
-    if (preco_atual === null) return { nome, unidade, preco_atual: null, estoque_atual: null, categoria: null, validade: null, erro: "preco_atual inválido (deve ser número >= 0)" };
-    if (estoque_atual === null) return { nome, unidade, preco_atual, estoque_atual: null, categoria: null, validade: null, erro: "estoque_atual inválido (deve ser número >= 0)" };
+    if (preco_atual === null) return { nome, unidade, preco_atual: null, categoria: null, validade: null, erro: "preco_atual inválido (deve ser número >= 0)" };
 
     const categoria = String(row["categoria"] ?? row["Categoria"] ?? "").trim() || null;
     const validade = String(row["validade"] ?? row["Validade"] ?? "").trim() || null;
 
-    return { nome, unidade, preco_atual, estoque_atual, categoria, validade, erro: null };
+    return { nome, unidade, preco_atual, categoria, validade, erro: null };
   });
 }
 
@@ -105,7 +102,6 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
       nome: l.nome,
       unidade: l.unidade!,
       preco_atual: l.preco_atual!,
-      estoque_atual: l.estoque_atual!,
       categoria: l.categoria,
       validade: l.validade,
     }));
@@ -142,10 +138,9 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
                 <code className="ml-1 px-1.5 py-0.5 bg-surface-subtle rounded text-xs">nome</code>,{" "}
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">unidade</code>,{" "}
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">preco_atual</code>,{" "}
-                <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">estoque_atual</code>,{" "}
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">categoria</code>,{" "}
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">validade</code>.
-                {" "}Esta importação <strong>substitui todo o catálogo</strong>: produtos da planilha serão criados ou atualizados, e os que não estiverem na planilha serão removidos. Kits e ofertas não são afetados. As colunas <em>categoria</em> e <em>validade</em> são opcionais.
+                {" "}Esta importação <strong>substitui todo o catálogo</strong>: produtos da planilha serão criados ou atualizados, e os que não estiverem na planilha serão removidos. Itens com categoria <em>ofertas</em> ou <em>kits</em> aparecem na página Ofertas e Kits e não são removidos pela importação (exclua-os por lá). As colunas <em>categoria</em> e <em>validade</em> são opcionais.
               </p>
               <button
                 type="button"
@@ -155,7 +150,6 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
                     nome: p.nome,
                     unidade: p.unidade,
                     preco_atual: p.preco_atual,
-                    estoque_atual: p.estoque_atual,
                     categoria: p.categoria ?? "",
                     validade: p.validade ?? "",
                   }));
@@ -201,7 +195,6 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
                         <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Produto</th>
                         <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Unidade</th>
                         <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Preço</th>
-                        <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Estoque</th>
                         <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Categoria</th>
                         <th className="text-left px-3 py-2 text-muted font-semibold uppercase tracking-wide">Validade</th>
                       </tr>
@@ -212,7 +205,6 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
                           <td className="px-3 py-2 font-medium text-foreground">{l.nome}</td>
                           <td className="px-3 py-2 text-muted">{l.unidade}</td>
                           <td className="px-3 py-2 text-foreground">{formatMoeda(l.preco_atual!)}</td>
-                          <td className="px-3 py-2 text-foreground">{l.estoque_atual}</td>
                           <td className="px-3 py-2 text-muted">{l.categoria ?? "—"}</td>
                           <td className="px-3 py-2 text-muted">{l.validade ?? "—"}</td>
                         </tr>

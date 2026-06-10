@@ -18,7 +18,6 @@ function formatMoeda(v: number) {
 
 interface EditState {
   preco_atual: number;
-  estoque_atual: number;
   ativo: boolean;
 }
 
@@ -27,8 +26,6 @@ interface Filtros {
   unidade: string;
   precoMin: string;
   precoMax: string;
-  estoqueMin: string;
-  estoqueMax: string;
   ativo: "" | "true" | "false";
 }
 
@@ -37,8 +34,6 @@ const filtrosIniciais: Filtros = {
   unidade: "",
   precoMin: "",
   precoMax: "",
-  estoqueMin: "",
-  estoqueMax: "",
   ativo: "",
 };
 
@@ -84,8 +79,6 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
       if (filtros.unidade && p.unidade !== filtros.unidade) return false;
       if (filtros.precoMin !== "" && p.preco_atual < parseFloat(filtros.precoMin)) return false;
       if (filtros.precoMax !== "" && p.preco_atual > parseFloat(filtros.precoMax)) return false;
-      if (filtros.estoqueMin !== "" && p.estoque_atual < parseFloat(filtros.estoqueMin)) return false;
-      if (filtros.estoqueMax !== "" && p.estoque_atual > parseFloat(filtros.estoqueMax)) return false;
       if (filtros.ativo !== "" && String(p.ativo) !== filtros.ativo) return false;
       return true;
     });
@@ -105,7 +98,6 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
     setEditandoId(produto.id);
     setEditValues({
       preco_atual: produto.preco_atual,
-      estoque_atual: produto.estoque_atual,
       ativo: produto.ativo,
     });
   }
@@ -119,7 +111,6 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
     if (!editValues) return;
     const payload = {
       preco_atual: editValues.preco_atual,
-      estoque_atual: editValues.estoque_atual,
       ativo: editValues.ativo,
     };
     setProdutos((prev) =>
@@ -134,7 +125,7 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
     setProdutos((prev) =>
       prev.map((p) => {
         const atualizado = atualizados.find((a) => a.nome.toLowerCase() === p.nome.toLowerCase());
-        return atualizado ? { ...p, preco_atual: atualizado.preco_atual, estoque_atual: atualizado.estoque_atual } : p;
+        return atualizado ? { ...p, preco_atual: atualizado.preco_atual } : p;
       })
     );
   }
@@ -189,28 +180,6 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
               className={`${inputCls} w-24`}
             />
           </div>
-          {/* Estoque */}
-          <div className="flex items-center gap-1">
-            <input
-              type="number"
-              min="0"
-              step="1"
-              placeholder="Estoque mín"
-              value={filtros.estoqueMin}
-              onChange={(e) => setFiltro("estoqueMin", e.target.value)}
-              className={`${inputCls} w-24`}
-            />
-            <span className="text-xs text-muted">–</span>
-            <input
-              type="number"
-              min="0"
-              step="1"
-              placeholder="Estoque máx"
-              value={filtros.estoqueMax}
-              onChange={(e) => setFiltro("estoqueMax", e.target.value)}
-              className={`${inputCls} w-24`}
-            />
-          </div>
           {/* Ativo */}
           <select
             value={filtros.ativo}
@@ -247,19 +216,17 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <table className="w-full text-sm table-fixed">
           <colgroup>
-            <col className="w-[22%]" />
-            <col className="w-[10%] hidden sm:table-column" />
-            <col className="w-[17%]" />
-            <col className="w-[17%]" />
-            <col className="w-[12%] hidden md:table-column" />
-            {!somenteLeitura && <col className="w-[22%]" />}
+            <col className="w-[28%]" />
+            <col className="w-[12%] hidden sm:table-column" />
+            <col className="w-[20%]" />
+            <col className="w-[15%] hidden md:table-column" />
+            {!somenteLeitura && <col className="w-[25%]" />}
           </colgroup>
           <thead>
             <tr className="border-b border-border bg-surface-subtle">
               <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide">Nome</th>
               <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide hidden sm:table-cell">Unidade</th>
               <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide">Preço</th>
-              <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide">Estoque</th>
               <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide hidden md:table-cell">Status</th>
               {!somenteLeitura && <th className="px-3 py-2.5 text-right text-xs font-semibold text-muted uppercase tracking-wide">Ações</th>}
             </tr>
@@ -276,7 +243,6 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
               const emEdicao = editandoId === produto.id;
               const valoresEdicao = emEdicao ? editValues! : null;
               const precoInvalido = valoresEdicao !== null && (isNaN(valoresEdicao.preco_atual) || valoresEdicao.preco_atual < 0);
-              const estoqueInvalido = valoresEdicao !== null && (isNaN(valoresEdicao.estoque_atual) || valoresEdicao.estoque_atual < 0);
 
               return (
                 <tr key={produto.id} className="border-b border-border last:border-0 hover:bg-surface-subtle transition-colors group">
@@ -295,21 +261,6 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
                       />
                     ) : (
                       <span className="font-semibold text-foreground">{formatMoeda(produto.preco_atual)}</span>
-                    )}
-                  </td>
-
-                  <td className="px-3 py-2.5">
-                    {emEdicao ? (
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={valoresEdicao!.estoque_atual}
-                        onChange={(e) => setEditValues((v) => v ? { ...v, estoque_atual: parseInt(e.target.value, 10) } : v)}
-                        className="w-full border border-brand rounded-md px-2 py-1 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-brand"
-                      />
-                    ) : (
-                      <span className="text-foreground">{produto.estoque_atual} <span className="text-muted text-xs">{produto.unidade}</span></span>
                     )}
                   </td>
 
@@ -353,7 +304,7 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
                           <Button
                             size="sm"
                             variant="primary"
-                            disabled={precoInvalido || estoqueInvalido}
+                            disabled={precoInvalido}
                             onClick={() => salvarEdicao(produto.id)}
                           >
                             Salvar

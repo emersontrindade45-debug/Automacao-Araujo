@@ -19,7 +19,7 @@ const TIPO_BADGE: Record<string, string> = {
   kit: "bg-emerald-100 text-emerald-700",
 };
 
-const VAZIO: Omit<Produto, "id" | "criado_em" | "estoque_atual"> = {
+const VAZIO: Omit<Produto, "id" | "criado_em"> = {
   nome: "",
   preco_atual: 0,
   unidade: "kg",
@@ -28,7 +28,8 @@ const VAZIO: Omit<Produto, "id" | "criado_em" | "estoque_atual"> = {
   validade: "",
   categoria: "ofertas",
   ativo: true,
-  disponivel: true,
+  nicho: null,
+  imagem_url: null,
 };
 
 export function OfertasTable({ itens }: Props) {
@@ -61,7 +62,6 @@ export function OfertasTable({ itens }: Props) {
         descricao: editForm.descricao ?? null,
         validade: editForm.validade ?? null,
         ativo: editForm.ativo ?? true,
-        disponivel: editForm.disponivel ?? true,
       });
       cancelarEdicao();
     });
@@ -78,7 +78,6 @@ export function OfertasTable({ itens }: Props) {
         validade: novoForm.validade || null,
         categoria: novoForm.tipo === "kit" ? "kits" : "ofertas",
         ativo: true,
-        disponivel: true,
       });
       setCriando(false);
       setNovoForm({ ...VAZIO });

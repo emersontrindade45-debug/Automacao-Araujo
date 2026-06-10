@@ -19,7 +19,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://zziapgnenvugyvrgrhrs.supabase.co/rest/v1/produtos?select=id,nome,preco_atual,unidade,estoque_atual&categoria=ilike.*{{ encodeURIComponent($json.categoria || '') }}*&ativo=eq.true&order=nome.asc",
+        "url": "=https://zziapgnenvugyvrgrhrs.supabase.co/rest/v1/produtos?select=id,nome,preco_atual,unidade,ativo&categoria=ilike.*{{ encodeURIComponent($json.categoria || '') }}*&ativo=eq.true&order=nome.asc",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
@@ -47,7 +47,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const categoria = $('Receber Categoria').first().json.categoria || '';\nconst resultados = $input.first().json;\n\nconst lista = Array.isArray(resultados) ? resultados : [];\n\nif (lista.length === 0) {\n  return [{\n    json: {\n      resultado: `Nenhum produto encontrado na categoria \"${categoria}\".`,\n      produtos: []\n    }\n  }];\n}\n\nconst formatarPreco = (v) =>\n  Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });\n\nconst linhas = lista.map((p) => {\n  const disponivel = Number(p.estoque_atual || 0) > 0;\n  const status = disponivel ? 'disponível' : 'sem estoque';\n  const preco = formatarPreco(p.preco_atual || 0);\n  const unidade = p.unidade || 'un';\n  return `- ${p.nome}: ${preco}/${unidade} (${status})`;\n});\n\nreturn [{\n  json: {\n    resultado: `Produtos da categoria ${categoria}:\\n` + linhas.join('\\n'),\n    produtos: lista.map((p) => ({\n      produto_id: p.id || '',\n      nome: p.nome || '',\n      preco_unitario: Number(p.preco_atual || 0),\n      unidade: p.unidade || 'un',\n      estoque: Number(p.estoque_atual || 0)\n    }))\n  }\n}];"
+        "jsCode": "const categoria = $('Receber Categoria').first().json.categoria || '';\nconst resultados = $input.first().json;\n\nconst lista = Array.isArray(resultados) ? resultados : [];\n\nif (lista.length === 0) {\n  return [{\n    json: {\n      resultado: `Nenhum produto encontrado na categoria \"${categoria}\".`,\n      produtos: []\n    }\n  }];\n}\n\nconst formatarPreco = (v) =>\n  Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });\n\nconst linhas = lista.map((p) => {\n  const preco = formatarPreco(p.preco_atual || 0);\n  const unidade = p.unidade || 'un';\n  return `- ${p.nome}: ${preco}/${unidade}`;\n});\n\nreturn [{\n  json: {\n    resultado: `Produtos da categoria ${categoria}:\\n` + linhas.join('\\n'),\n    produtos: lista.map((p) => ({\n      produto_id: p.id || '',\n      nome: p.nome || '',\n      preco_unitario: Number(p.preco_atual || 0),\n      unidade: p.unidade || 'un'\n    }))\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

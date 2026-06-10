@@ -37,7 +37,6 @@ export async function updatePrecoProduto(id: string, preco_atual: number) {
 
 export interface ProdutoUpdatePayload {
   preco_atual: number;
-  estoque_atual: number;
   ativo: boolean;
 }
 
@@ -54,7 +53,6 @@ export interface LinhaPlanilha {
   nome: string;
   unidade: string;
   preco_atual: number;
-  estoque_atual: number;
   categoria: string | null;
   validade: string | null;
 }
@@ -63,7 +61,7 @@ export async function getOfertasEKits() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("produtos")
-    .select("id, nome, preco_atual, unidade, tipo, descricao, validade, categoria, ativo, disponivel, criado_em, nicho, imagem_url")
+    .select("id, nome, preco_atual, unidade, tipo, descricao, validade, categoria, ativo, criado_em, nicho, imagem_url")
     .in("tipo", ["oferta", "kit"])
     .order("tipo")
     .order("nome");
@@ -81,14 +79,13 @@ export interface OfertaKitPayload {
   validade: string | null;
   categoria: string;
   ativo: boolean;
-  disponivel: boolean;
 }
 
 export async function criarOfertaKit(payload: OfertaKitPayload) {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("produtos")
-    .insert({ ...payload, estoque_atual: 0 })
+    .insert(payload)
     .select()
     .single();
 
@@ -117,27 +114,36 @@ export async function deletarOfertaKit(id: string) {
   if (error) throw error;
 }
 
+// Itens da planilha com categoria "ofertas"/"kits" são classificados como
+// oferta/kit para aparecerem na página Ofertas e Kits (tipo default do banco é "produto").
+function tipoDaCategoria(categoria: string | null): TipoProduto {
+  if (categoria === "ofertas") return "oferta";
+  if (categoria === "kits") return "kit";
+  return "produto";
+}
+
 export async function upsertProdutosEmLote(linhas: LinhaPlanilha[]) {
   const supabase = createAdminClient();
 
   await Promise.all(
-    linhas.map(({ nome, unidade, preco_atual, estoque_atual, categoria, validade }) =>
-      supabase
+    linhas.map(({ nome, unidade, preco_atual, categoria, validade }) => {
+      const categoriaNorm = categoria?.trim().toLowerCase() || null;
+      return supabase
         .from("produtos")
         .upsert(
           {
             nome,
             unidade,
             preco_atual,
-            estoque_atual,
             ativo: true,
-            categoria: categoria || null,
+            tipo: tipoDaCategoria(categoriaNorm),
+            categoria: categoriaNorm,
             validade: validade || null,
           },
           { onConflict: "nome", ignoreDuplicates: false }
         )
-        .throwOnError()
-    )
+        .throwOnError();
+    })
   );
 
   const nomesImportados = new Set(linhas.map((l) => l.nome));

@@ -36,7 +36,6 @@ export interface Produto {
   id: string;
   nome: string;
   preco_atual: number;
-  estoque_atual: number;
   unidade: string;
   ativo: boolean;
   criado_em: string;
@@ -44,7 +43,6 @@ export interface Produto {
   descricao: string | null;
   validade: string | null;
   categoria: string | null;
-  disponivel: boolean;
   nicho: string | null;
   imagem_url: string | null;
 }

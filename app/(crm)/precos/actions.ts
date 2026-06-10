@@ -46,7 +46,7 @@ export async function alterarStatusPrecoAction(precoId: string, status: import("
 
 export async function editarProdutoAction(
   id: string,
-  payload: { preco_atual: number; estoque_atual: number; ativo: boolean }
+  payload: { preco_atual: number; ativo: boolean }
 ) {
   await updateProduto(id, payload);
   revalidatePath("/precos");

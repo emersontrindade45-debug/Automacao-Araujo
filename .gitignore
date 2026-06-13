@@ -66,3 +66,9 @@ n8n/workflows/fluxo*_upload.json
 # Scripts de patch n8n (contêm chaves hardcoded)
 n8n/patch_*.py
 n8n/scripts/deploy-*.js
+
+# Dados de produtos (arquivos grandes e CSVs gerados)
+dados/*.xlsx
+dados/*.csv
+dados/__pycache__/
+dados/nomes_no_banco.txt

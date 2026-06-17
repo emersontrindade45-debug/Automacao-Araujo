@@ -5,9 +5,11 @@ coluna `acao` (upsert, ativar, desativar). Reaproveita o padrao de lotes
 pequenos com pausa de dados/atualizar_precos.py.
 
 Acoes aceitas (coluna `acao`, case-insensitive, vazio = upsert):
-  upsert     -> cria por nome (se nao existe) ou atualiza todos os campos
+  upsert     -> cria por nome (se nao existe) ou atualiza os campos
                 preenchidos na linha (unidade, preco_atual, categoria, nicho,
-                validade). Sempre forca ativo=true.
+                validade). Celula vazia em categoria/nicho/validade NAO apaga
+                o valor existente no banco -- so atualiza quando preenchida.
+                Sempre forca ativo=true.
   ativar     -> so altera ativo=true para o nome. Demais colunas ignoradas.
   desativar  -> so altera ativo=false para o nome. Demais colunas ignoradas.
 
@@ -101,15 +103,24 @@ def ler_planilha(caminho):
             if preco is None:
                 erros.append((nome, "upsert_sem_preco"))
                 continue
-            linhas_upsert.append({
+            linha = {
                 "nome": nome,
                 "preco_atual": round(float(preco), 2),
                 "unidade": str(unidade).strip(),
-                "categoria": str(categoria).strip().lower() if categoria else None,
-                "nicho": str(nicho).strip().lower() if nicho else None,
-                "validade": str(validade).strip() if validade else None,
                 "ativo": True,
-            })
+            }
+            # categoria/nicho/validade vazios na planilha NAO apagam o valor
+            # existente no banco -- so entram no payload quando preenchidos,
+            # pois o upsert usa merge-duplicates (qualquer chave enviada
+            # sobrescreve, mesmo com None). Mesma regra do upsert da UI
+            # (lib/supabase/queries/produtos.ts).
+            if categoria:
+                linha["categoria"] = str(categoria).strip().lower()
+            if nicho:
+                linha["nicho"] = str(nicho).strip().lower()
+            if validade:
+                linha["validade"] = str(validade).strip()
+            linhas_upsert.append(linha)
 
     wb.close()
     return linhas_upsert, nomes_ativar, nomes_desativar, erros
@@ -172,14 +183,29 @@ def main():
 
     total_aplicado = 0
 
-    # upsert em lotes
-    for i in range(0, len(linhas_upsert), BATCH):
-        lote = linhas_upsert[i:i + BATCH]
-        supabase_request(url, key, "POST", "/rest/v1/produtos?on_conflict=nome", lote, dry_run)
-        total_aplicado += len(lote)
-        print(f"  upsert {min(i+BATCH, len(linhas_upsert))}/{len(linhas_upsert)}", flush=True)
-        if i + BATCH < len(linhas_upsert) and not dry_run:
-            time.sleep(PAUSA_SEGUNDOS)
+    # upsert em lotes -- o PostgREST rejeita arrays com objetos de chaves
+    # diferentes no mesmo POST ("All object keys must match"), e como
+    # categoria/nicho/validade so entram no payload quando preenchidos
+    # (ver ler_planilha), linhas do mesmo lote bruto podem ter formatos
+    # diferentes. Agrupamos por assinatura de chaves antes de fatiar em
+    # lotes de tamanho BATCH, mantendo cada POST homogeneo.
+    grupos_upsert = {}
+    for linha in linhas_upsert:
+        assinatura = tuple(sorted(linha.keys()))
+        grupos_upsert.setdefault(assinatura, []).append(linha)
+
+    feitos_upsert = 0
+    for grupo in grupos_upsert.values():
+        for i in range(0, len(grupo), BATCH):
+            lote = grupo[i:i + BATCH]
+            supabase_request(url, key, "POST", "/rest/v1/produtos?on_conflict=nome", lote, dry_run)
+            total_aplicado += len(lote)
+            feitos_upsert += len(lote)
+            print(f"  upsert {feitos_upsert}/{len(linhas_upsert)}", flush=True)
+            ultimo_lote_do_grupo = i + BATCH >= len(grupo)
+            eh_ultimo_grupo = feitos_upsert >= len(linhas_upsert)
+            if not (ultimo_lote_do_grupo and eh_ultimo_grupo) and not dry_run:
+                time.sleep(PAUSA_SEGUNDOS)
 
     # ativar em lotes (PATCH com filtro nome=in.(...))
     for i in range(0, len(nomes_ativar), BATCH):

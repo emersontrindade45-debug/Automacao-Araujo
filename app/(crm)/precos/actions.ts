@@ -1,7 +1,7 @@
 "use server";
 
 import { updateStatusPreco, aprovarPreco } from "@/lib/supabase/queries/precos";
-import { updateProduto, upsertProdutosEmLote } from "@/lib/supabase/queries/produtos";
+import { updateProduto, upsertProdutosEmLote, ativarDesativarEmLote } from "@/lib/supabase/queries/produtos";
 import type { LinhaPlanilha } from "@/lib/supabase/queries/produtos";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -54,5 +54,10 @@ export async function editarProdutoAction(
 
 export async function importarProdutosAction(linhas: LinhaPlanilha[]) {
   await upsertProdutosEmLote(linhas);
+  revalidatePath("/precos");
+}
+
+export async function ativarDesativarProdutosAction(ids: string[], ativo: boolean) {
+  await ativarDesativarEmLote(ids, ativo);
   revalidatePath("/precos");
 }

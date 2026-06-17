@@ -167,7 +167,7 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">categoria</code>,{" "}
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">nicho</code>,{" "}
                 <code className="px-1.5 py-0.5 bg-surface-subtle rounded text-xs">validade</code>.
-                {" "}Esta importação <strong>substitui todo o catálogo</strong>: produtos da planilha serão criados ou atualizados, e os que não estiverem na planilha serão removidos. Itens com categoria <em>ofertas</em> ou <em>kits</em> aparecem na página Ofertas e Kits e não são removidos pela importação (exclua-os por lá). As colunas <em>categoria</em>, <em>nicho</em> e <em>validade</em> são opcionais.
+                {" "}Produtos da planilha serão <strong>criados ou atualizados</strong> (por nome) — produtos que não estiverem na planilha permanecem intactos no catálogo. Itens com categoria <em>ofertas</em> ou <em>kits</em> aparecem na página Ofertas e Kits. As colunas <em>categoria</em>, <em>nicho</em> e <em>validade</em> são opcionais.
               </p>
               <div className="text-xs text-muted bg-surface-subtle border border-border rounded-lg p-3 space-y-1">
                 <p className="font-semibold text-foreground">Coluna nicho — define a seção do SITE onde o item aparece:</p>
@@ -216,7 +216,7 @@ export function ImportarModal({ aberto, onFechar, produtos, onConcluido }: Impor
           {previa && (
             <div className="space-y-3">
               <p className="text-sm font-medium text-foreground">
-                {validas.length} produto{validas.length !== 1 ? "s" : ""} na planilha (catálogo será substituído)
+                {validas.length} produto{validas.length !== 1 ? "s" : ""} na planilha (serão criados ou atualizados)
                 {comErro.length > 0 && (
                   <span className="text-warning ml-1">· {comErro.length} linha{comErro.length !== 1 ? "s" : ""} com erro (ignoradas)</span>
                 )}

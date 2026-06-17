@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo, useEffect } from "react";
 import type { Produto } from "@/lib/types";
-import { editarProdutoAction } from "@/app/(crm)/precos/actions";
+import { editarProdutoAction, ativarDesativarProdutosAction } from "@/app/(crm)/precos/actions";
 import { Button } from "@/components/ui/button";
 import { ImportarModal } from "./importar-modal";
 import { createClient } from "@/lib/supabase/client";
@@ -53,6 +53,7 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
   const [importarAberto, setImportarAberto] = useState(false);
   const [pending, startTransition] = useTransition();
   const [filtros, setFiltros] = useState<Filtros>(filtrosIniciais);
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const supabase = createClient();
@@ -97,6 +98,46 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
 
   function limparFiltros() {
     setFiltros(filtrosIniciais);
+  }
+
+  function alternarSelecao(id: string) {
+    setSelecionados((prev) => {
+      const novo = new Set(prev);
+      if (novo.has(id)) novo.delete(id);
+      else novo.add(id);
+      return novo;
+    });
+  }
+
+  function alternarSelecionarTodos() {
+    setSelecionados((prev) => {
+      const todosVisiveisSelecionados = filtrados.every((p) => prev.has(p.id));
+      if (todosVisiveisSelecionados) {
+        const novo = new Set(prev);
+        filtrados.forEach((p) => novo.delete(p.id));
+        return novo;
+      }
+      const novo = new Set(prev);
+      filtrados.forEach((p) => novo.add(p.id));
+      return novo;
+    });
+  }
+
+  function aplicarAcaoEmLote(ativo: boolean) {
+    const ids = Array.from(selecionados);
+    if (ids.length === 0) return;
+    const acaoLabel = ativo ? "ativar" : "desativar";
+    if (!confirm(`${ativo ? "Ativar" : "Desativar"} ${ids.length} produto${ids.length !== 1 ? "s" : ""} selecionado${ids.length !== 1 ? "s" : ""}?`)) return;
+
+    setProdutos((prev) => prev.map((p) => (selecionados.has(p.id) ? { ...p, ativo } : p)));
+    startTransition(async () => {
+      try {
+        await ativarDesativarProdutosAction(ids, ativo);
+        setSelecionados(new Set());
+      } catch {
+        alert(`Falha ao ${acaoLabel} os produtos selecionados. Tente novamente.`);
+      }
+    });
   }
 
   function iniciarEdicao(produto: Produto) {
@@ -231,14 +272,26 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <table className="w-full text-sm table-fixed">
           <colgroup>
-            <col className="w-[28%]" />
+            {!somenteLeitura && <col className="w-[4%]" />}
+            <col className="w-[26%]" />
             <col className="w-[12%] hidden sm:table-column" />
-            <col className="w-[20%]" />
+            <col className="w-[18%]" />
             <col className="w-[15%] hidden md:table-column" />
             {!somenteLeitura && <col className="w-[25%]" />}
           </colgroup>
           <thead>
             <tr className="border-b border-border bg-surface-subtle">
+              {!somenteLeitura && (
+                <th className="px-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={filtrados.length > 0 && filtrados.every((p) => selecionados.has(p.id))}
+                    onChange={alternarSelecionarTodos}
+                    className="h-4 w-4 rounded border-border accent-brand cursor-pointer"
+                    aria-label="Selecionar todos"
+                  />
+                </th>
+              )}
               <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide">Nome</th>
               <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide hidden sm:table-cell">Unidade</th>
               <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted uppercase tracking-wide">Preço</th>
@@ -249,7 +302,7 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
           <tbody>
             {filtrados.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-center py-10 text-muted text-sm">
+                <td colSpan={somenteLeitura ? 4 : 6} className="text-center py-10 text-muted text-sm">
                   {temFiltroAtivo ? "Nenhum produto corresponde aos filtros." : "Nenhum produto encontrado."}
                 </td>
               </tr>
@@ -261,6 +314,17 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
 
               return (
                 <tr key={produto.id} className="border-b border-border last:border-0 hover:bg-surface-subtle transition-colors group">
+                  {!somenteLeitura && (
+                    <td className="px-3 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={selecionados.has(produto.id)}
+                        onChange={() => alternarSelecao(produto.id)}
+                        className="h-4 w-4 rounded border-border accent-brand cursor-pointer"
+                        aria-label={`Selecionar ${produto.nome}`}
+                      />
+                    </td>
+                  )}
                   <td className="px-3 py-2.5 font-medium text-foreground truncate">{produto.nome}</td>
                   <td className="px-3 py-2.5 text-muted text-xs hidden sm:table-cell">{produto.unidade}</td>
 
@@ -364,6 +428,25 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
           </tbody>
         </table>
       </div>
+
+      {!somenteLeitura && selecionados.size > 0 && (
+        <div className="sticky bottom-0 flex items-center justify-between gap-3 px-4 py-3 bg-surface border border-border rounded-xl shadow-lg">
+          <p className="text-sm text-foreground">
+            <span className="font-semibold">{selecionados.size}</span> produto{selecionados.size !== 1 ? "s" : ""} selecionado{selecionados.size !== 1 ? "s" : ""}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="secondary" disabled={pending} onClick={() => aplicarAcaoEmLote(true)}>
+              Ativar selecionados
+            </Button>
+            <Button size="sm" variant="destructive" disabled={pending} onClick={() => aplicarAcaoEmLote(false)}>
+              Desativar selecionados
+            </Button>
+            <Button size="sm" variant="ghost" disabled={pending} onClick={() => setSelecionados(new Set())}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
 
       <ImportarModal
         aberto={importarAberto}

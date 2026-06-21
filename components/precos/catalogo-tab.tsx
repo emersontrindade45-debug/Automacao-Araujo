@@ -4,6 +4,7 @@ import { useState, useTransition, useMemo, useEffect } from "react";
 import type { Produto } from "@/lib/types";
 import { editarProdutoAction, ativarDesativarProdutosAction } from "@/app/(crm)/precos/actions";
 import { Button } from "@/components/ui/button";
+import { SelectCheckbox } from "@/components/ui/select-checkbox";
 import { ImportarModal } from "./importar-modal";
 import { createClient } from "@/lib/supabase/client";
 
@@ -302,12 +303,10 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
             <tr className="border-b border-border bg-surface-subtle">
               {!somenteLeitura && (
                 <th className="px-3 py-2.5">
-                  <input
-                    type="checkbox"
+                  <SelectCheckbox
                     checked={filtrados.length > 0 && filtrados.every((p) => selecionados.has(p.id))}
-                    onChange={alternarSelecionarTodos}
-                    className="h-4 w-4 rounded border-border accent-brand cursor-pointer"
-                    aria-label="Selecionar todos"
+                    onSelect={alternarSelecionarTodos}
+                    ariaLabel="Selecionar todos"
                   />
                 </th>
               )}
@@ -335,13 +334,10 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
                 <tr key={produto.id} className="border-b border-border last:border-0 hover:bg-surface-subtle transition-colors group">
                   {!somenteLeitura && (
                     <td className="px-3 py-2.5">
-                      <input
-                        type="checkbox"
+                      <SelectCheckbox
                         checked={selecionados.has(produto.id)}
-                        onClick={(e) => { e.preventDefault(); alternarSelecao(produto.id, e.shiftKey); }}
-                        onChange={() => {}}
-                        className="h-4 w-4 rounded border-border accent-brand cursor-pointer"
-                        aria-label={`Selecionar ${produto.nome}`}
+                        onSelect={(shiftKey) => alternarSelecao(produto.id, shiftKey)}
+                        ariaLabel={`Selecionar ${produto.nome}`}
                       />
                     </td>
                   )}

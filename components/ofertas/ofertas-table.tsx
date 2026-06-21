@@ -9,6 +9,7 @@ import {
   ativarDesativarOfertasKitsAction,
 } from "@/app/(crm)/ofertas/actions";
 import { Button } from "@/components/ui/button";
+import { SelectCheckbox } from "@/components/ui/select-checkbox";
 
 interface Props {
   itens: Produto[];
@@ -251,12 +252,10 @@ export function OfertasTable({ itens, tipoFixo }: Props) {
           <thead>
             <tr className="border-b border-border text-muted text-xs uppercase">
               <th className="px-4 py-3">
-                <input
-                  type="checkbox"
+                <SelectCheckbox
                   checked={visíveis.length > 0 && visíveis.every((i) => selecionados.has(i.id))}
-                  onChange={alternarSelecionarTodos}
-                  className="h-4 w-4 rounded border-border accent-brand cursor-pointer"
-                  aria-label="Selecionar todos"
+                  onSelect={alternarSelecionarTodos}
+                  ariaLabel="Selecionar todos"
                 />
               </th>
               <th className="text-left px-4 py-3 font-medium">Nome</th>
@@ -378,13 +377,10 @@ export function OfertasTable({ itens, tipoFixo }: Props) {
             {visíveis.map((item) => (
               <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-subtle/50">
                 <td className="px-4 py-2">
-                  <input
-                    type="checkbox"
+                  <SelectCheckbox
                     checked={selecionados.has(item.id)}
-                    onClick={(e) => { e.preventDefault(); alternarSelecao(item.id, e.shiftKey); }}
-                    onChange={() => {}}
-                    className="h-4 w-4 rounded border-border accent-brand cursor-pointer"
-                    aria-label={`Selecionar ${item.nome}`}
+                    onSelect={(shiftKey) => alternarSelecao(item.id, shiftKey)}
+                    ariaLabel={`Selecionar ${item.nome}`}
                   />
                 </td>
                 {editandoId === item.id ? (

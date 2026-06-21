@@ -65,10 +65,25 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "produtos" },
         (payload) => {
+          // payload.new traz a linha inteira (inclusive embedding, vetor pesado
+          // não usado aqui) — extraímos só os campos exibidos para evitar
+          // re-render pesado a cada update de embedding em segundo plano.
           const novo = payload.new as Produto;
-          setProdutos((prev) =>
-            prev.map((p) => (p.id === novo.id ? { ...p, ...novo } : p))
-          );
+          setProdutos((prev) => {
+            const atual = prev.find((p) => p.id === novo.id);
+            if (!atual) return prev;
+            const mudou =
+              atual.preco_atual !== novo.preco_atual ||
+              atual.ativo !== novo.ativo ||
+              atual.nome !== novo.nome ||
+              atual.unidade !== novo.unidade;
+            if (!mudou) return prev;
+            return prev.map((p) =>
+              p.id === novo.id
+                ? { ...p, nome: novo.nome, preco_atual: novo.preco_atual, ativo: novo.ativo, unidade: novo.unidade }
+                : p
+            );
+          });
         }
       )
       .subscribe();

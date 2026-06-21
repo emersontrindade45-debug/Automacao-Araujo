@@ -2,11 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Produto, TipoProduto } from "@/lib/types";
 
+const COLUNAS_PRODUTO = "id, nome, preco_atual, unidade, ativo, criado_em, tipo, descricao, validade, categoria, nicho, imagem_url";
+
 export async function getProdutos() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("produtos")
-    .select("*")
+    .select(COLUNAS_PRODUTO)
     .order("nome");
 
   if (error) throw error;
@@ -17,7 +19,7 @@ export async function getProdutoById(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("produtos")
-    .select("*")
+    .select(COLUNAS_PRODUTO)
     .eq("id", id)
     .single();
 
@@ -88,7 +90,7 @@ export async function criarOfertaKit(payload: OfertaKitPayload) {
   const { data, error } = await supabase
     .from("produtos")
     .insert(payload)
-    .select()
+    .select(COLUNAS_PRODUTO)
     .single();
 
   if (error) throw error;

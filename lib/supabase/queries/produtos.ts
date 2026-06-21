@@ -63,7 +63,7 @@ export async function getOfertasEKits() {
   const { data, error } = await supabase
     .from("produtos")
     .select("id, nome, preco_atual, unidade, tipo, descricao, validade, categoria, ativo, criado_em, nicho, imagem_url")
-    .in("tipo", ["oferta", "kit"])
+    .in("tipo", ["oferta", "kit", "padaria"])
     .order("tipo")
     .order("nome");
 
@@ -111,16 +111,17 @@ export async function deletarOfertaKit(id: string) {
     .from("produtos")
     .delete()
     .eq("id", id)
-    .in("tipo", ["oferta", "kit"]);
+    .in("tipo", ["oferta", "kit", "padaria"]);
 
   if (error) throw error;
 }
 
-// Itens da planilha com categoria "ofertas"/"kits" são classificados como
-// oferta/kit para aparecerem na página Ofertas e Kits (tipo default do banco é "produto").
+// Itens da planilha com categoria "ofertas"/"kits"/"padaria" são classificados
+// como oferta/kit/padaria para aparecerem na página Ofertas e Kits (tipo default do banco é "produto").
 function tipoDaCategoria(categoria: string | null): TipoProduto {
   if (categoria === "ofertas") return "oferta";
   if (categoria === "kits") return "kit";
+  if (categoria === "padaria") return "padaria";
   return "produto";
 }
 

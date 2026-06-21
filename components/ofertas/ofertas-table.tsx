@@ -6,17 +6,21 @@ import {
   criarOfertaKitAction,
   atualizarOfertaKitAction,
   deletarOfertaKitAction,
+  ativarDesativarOfertasKitsAction,
 } from "@/app/(crm)/ofertas/actions";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   itens: Produto[];
+  tipoFixo?: TipoProduto;
 }
 
-const TIPO_LABEL: Record<string, string> = { oferta: "Oferta", kit: "Kit" };
+const TIPO_LABEL: Record<string, string> = { oferta: "Oferta", kit: "Kit", padaria: "Padaria" };
 
 const TIPO_BADGE: Record<string, string> = {
   oferta: "bg-amber-100 text-amber-700",
   kit: "bg-emerald-100 text-emerald-700",
+  padaria: "bg-orange-100 text-orange-700",
 };
 
 // Nicho define a seção do SITE onde o item aparece.
@@ -34,7 +38,9 @@ const NICHO_LABEL: Record<string, string> = {
 };
 
 function nichoPadrao(tipo: string): string {
-  return tipo === "kit" ? "churrasco" : "acougue";
+  if (tipo === "kit") return "churrasco";
+  if (tipo === "padaria") return "padaria";
+  return "acougue";
 }
 
 // Aceita vírgula ou ponto como separador decimal (ex: "12,50" ou "12.50")
@@ -55,23 +61,82 @@ const VAZIO: Omit<Produto, "id" | "criado_em"> = {
   imagem_url: null,
 };
 
-export function OfertasTable({ itens }: Props) {
-  const [filtro, setFiltro] = useState<"todos" | "oferta" | "kit">("todos");
+export function OfertasTable({ itens, tipoFixo }: Props) {
+  const [filtro, setFiltro] = useState<"todos" | "oferta" | "kit" | "padaria">("todos");
   const [filtroAtivo, setFiltroAtivo] = useState<"" | "true" | "false">("");
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Produto>>({});
   const [criando, setCriando] = useState(false);
-  const [novoForm, setNovoForm] = useState({ ...VAZIO });
+  const [novoForm, setNovoForm] = useState({ ...VAZIO, tipo: tipoFixo ?? VAZIO.tipo, nicho: nichoPadrao(tipoFixo ?? VAZIO.tipo) });
   // Preços como texto durante a digitação para aceitar vírgula (12,50)
   const [novoPrecoTxt, setNovoPrecoTxt] = useState("");
   const [editPrecoTxt, setEditPrecoTxt] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [ultimoSelecionadoId, setUltimoSelecionadoId] = useState<string | null>(null);
 
   const visíveis = itens.filter(
     (i) =>
-      (filtro === "todos" || i.tipo === filtro) &&
+      (tipoFixo ? i.tipo === tipoFixo : filtro === "todos" || i.tipo === filtro) &&
       (filtroAtivo === "" || String(i.ativo) === filtroAtivo)
   );
+
+  function alternarSelecao(id: string, shiftKey: boolean) {
+    if (shiftKey && ultimoSelecionadoId) {
+      const ids = visíveis.map((i) => i.id);
+      const i1 = ids.indexOf(ultimoSelecionadoId);
+      const i2 = ids.indexOf(id);
+      if (i1 !== -1 && i2 !== -1) {
+        const [inicio, fim] = i1 < i2 ? [i1, i2] : [i2, i1];
+        const intervalo = ids.slice(inicio, fim + 1);
+        setSelecionados((prev) => {
+          const novo = new Set(prev);
+          intervalo.forEach((itemId) => novo.add(itemId));
+          return novo;
+        });
+        setUltimoSelecionadoId(id);
+        return;
+      }
+    }
+
+    setSelecionados((prev) => {
+      const novo = new Set(prev);
+      if (novo.has(id)) novo.delete(id);
+      else novo.add(id);
+      return novo;
+    });
+    setUltimoSelecionadoId(id);
+  }
+
+  function alternarSelecionarTodos() {
+    setSelecionados((prev) => {
+      const todosVisiveisSelecionados = visíveis.every((i) => prev.has(i.id));
+      if (todosVisiveisSelecionados) {
+        const novo = new Set(prev);
+        visíveis.forEach((i) => novo.delete(i.id));
+        return novo;
+      }
+      const novo = new Set(prev);
+      visíveis.forEach((i) => novo.add(i.id));
+      return novo;
+    });
+  }
+
+  function aplicarAcaoEmLote(ativo: boolean) {
+    const ids = Array.from(selecionados);
+    if (ids.length === 0) return;
+    const acaoLabel = ativo ? "ativar" : "desativar";
+    if (!confirm(`${ativo ? "Ativar" : "Desativar"} ${ids.length} item${ids.length !== 1 ? "ns" : ""} selecionado${ids.length !== 1 ? "s" : ""}?`)) return;
+
+    startTransition(async () => {
+      try {
+        await ativarDesativarOfertasKitsAction(ids, ativo);
+        setSelecionados(new Set());
+      } catch {
+        alert(`Falha ao ${acaoLabel} os itens selecionados. Tente novamente.`);
+      }
+    });
+  }
 
   function iniciarEdicao(item: Produto) {
     setEditandoId(item.id);
@@ -100,6 +165,12 @@ export function OfertasTable({ itens }: Props) {
     });
   }
 
+  function categoriaDoTipo(tipo: string): string {
+    if (tipo === "kit") return "kits";
+    if (tipo === "padaria") return "padaria";
+    return "ofertas";
+  }
+
   function salvarNovo() {
     startTransition(async () => {
       await criarOfertaKitAction({
@@ -109,12 +180,12 @@ export function OfertasTable({ itens }: Props) {
         tipo: novoForm.tipo as TipoProduto,
         descricao: novoForm.descricao || null,
         validade: novoForm.validade || null,
-        categoria: novoForm.tipo === "kit" ? "kits" : "ofertas",
+        categoria: categoriaDoTipo(novoForm.tipo),
         ativo: true,
         nicho: novoForm.nicho ?? nichoPadrao(novoForm.tipo),
       });
       setCriando(false);
-      setNovoForm({ ...VAZIO });
+      setNovoForm({ ...VAZIO, tipo: tipoFixo ?? VAZIO.tipo, nicho: nichoPadrao(tipoFixo ?? VAZIO.tipo) });
       setNovoPrecoTxt("");
     });
   }
@@ -138,7 +209,7 @@ export function OfertasTable({ itens }: Props) {
       {/* Filtros + botão novo */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          {(["todos", "oferta", "kit"] as const).map((t) => (
+          {!tipoFixo && (["todos", "oferta", "kit"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setFiltro(t)}
@@ -179,6 +250,15 @@ export function OfertasTable({ itens }: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-muted text-xs uppercase">
+              <th className="px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={visíveis.length > 0 && visíveis.every((i) => selecionados.has(i.id))}
+                  onChange={alternarSelecionarTodos}
+                  className="h-4 w-4 rounded border-border accent-brand cursor-pointer"
+                  aria-label="Selecionar todos"
+                />
+              </th>
               <th className="text-left px-4 py-3 font-medium">Nome</th>
               <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Tipo</th>
               <th className="text-left px-4 py-3 font-medium">Preço</th>
@@ -192,6 +272,7 @@ export function OfertasTable({ itens }: Props) {
             {/* Linha de novo item */}
             {criando && (
               <tr className="border-b border-border bg-brand-50/40">
+                <td className="px-4 py-2" />
                 <td className="px-4 py-2">
                   <input
                     className="w-full border border-border rounded-md px-2 py-1 text-sm bg-surface"
@@ -202,17 +283,19 @@ export function OfertasTable({ itens }: Props) {
                 </td>
                 <td className="px-4 py-2 hidden sm:table-cell">
                   <div className="flex flex-col gap-1">
-                    <select
-                      className="border border-border rounded-md px-2 py-1 text-sm bg-surface"
-                      value={novoForm.tipo}
-                      onChange={(e) => {
-                        const tipo = e.target.value as TipoProduto;
-                        setNovoForm({ ...novoForm, tipo, nicho: nichoPadrao(tipo) });
-                      }}
-                    >
-                      <option value="oferta">Oferta</option>
-                      <option value="kit">Kit</option>
-                    </select>
+                    {!tipoFixo && (
+                      <select
+                        className="border border-border rounded-md px-2 py-1 text-sm bg-surface"
+                        value={novoForm.tipo}
+                        onChange={(e) => {
+                          const tipo = e.target.value as TipoProduto;
+                          setNovoForm({ ...novoForm, tipo, nicho: nichoPadrao(tipo) });
+                        }}
+                      >
+                        <option value="oferta">Oferta</option>
+                        <option value="kit">Kit</option>
+                      </select>
+                    )}
                     <select
                       className="border border-border rounded-md px-2 py-1 text-xs bg-surface"
                       value={novoForm.nicho ?? nichoPadrao(novoForm.tipo)}
@@ -274,7 +357,7 @@ export function OfertasTable({ itens }: Props) {
                       Salvar
                     </button>
                     <button
-                      onClick={() => { setCriando(false); setNovoForm({ ...VAZIO }); setNovoPrecoTxt(""); }}
+                      onClick={() => { setCriando(false); setNovoForm({ ...VAZIO, tipo: tipoFixo ?? VAZIO.tipo, nicho: nichoPadrao(tipoFixo ?? VAZIO.tipo) }); setNovoPrecoTxt(""); }}
                       className="text-xs px-2 py-1 rounded bg-surface-subtle text-muted hover:text-foreground"
                     >
                       Cancelar
@@ -286,7 +369,7 @@ export function OfertasTable({ itens }: Props) {
 
             {visíveis.length === 0 && !criando && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-muted text-sm">
+                <td colSpan={8} className="px-4 py-8 text-center text-muted text-sm">
                   Nenhum item encontrado.
                 </td>
               </tr>
@@ -294,6 +377,16 @@ export function OfertasTable({ itens }: Props) {
 
             {visíveis.map((item) => (
               <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-subtle/50">
+                <td className="px-4 py-2">
+                  <input
+                    type="checkbox"
+                    checked={selecionados.has(item.id)}
+                    onClick={(e) => { e.preventDefault(); alternarSelecao(item.id, e.shiftKey); }}
+                    onChange={() => {}}
+                    className="h-4 w-4 rounded border-border accent-brand cursor-pointer"
+                    aria-label={`Selecionar ${item.nome}`}
+                  />
+                </td>
                 {editandoId === item.id ? (
                   <>
                     <td className="px-4 py-2">
@@ -449,6 +542,25 @@ export function OfertasTable({ itens }: Props) {
           </tbody>
         </table>
       </div>
+
+      {selecionados.size > 0 && (
+        <div className="sticky bottom-0 flex items-center justify-between gap-3 px-4 py-3 bg-surface border border-border rounded-xl shadow-lg">
+          <p className="text-sm text-foreground">
+            <span className="font-semibold">{selecionados.size}</span> item{selecionados.size !== 1 ? "ns" : ""} selecionado{selecionados.size !== 1 ? "s" : ""}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="secondary" disabled={isPending} onClick={() => aplicarAcaoEmLote(true)}>
+              Ativar selecionados
+            </Button>
+            <Button size="sm" variant="destructive" disabled={isPending} onClick={() => aplicarAcaoEmLote(false)}>
+              Desativar selecionados
+            </Button>
+            <Button size="sm" variant="ghost" disabled={isPending} onClick={() => setSelecionados(new Set())}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

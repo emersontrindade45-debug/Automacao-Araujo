@@ -1,4 +1,4 @@
-import { OfertasTable } from "@/components/ofertas/ofertas-table";
+import { OfertasTabs } from "@/components/ofertas/ofertas-tabs";
 import { getOfertasEKits } from "@/lib/supabase/queries/produtos";
 
 export const metadata = { title: "Ofertas e Kits – Araujo Hub" };
@@ -11,10 +11,10 @@ export default async function OfertasPage() {
       <div>
         <h1 className="text-xl font-semibold text-foreground">Ofertas e Kits</h1>
         <p className="text-sm text-muted mt-1">
-          Gerencie as ofertas e kits disponíveis para os clientes.
+          Gerencie as ofertas, kits e produtos de padaria disponíveis para os clientes.
         </p>
       </div>
-      <OfertasTable itens={itens} />
+      <OfertasTabs itens={itens} />
     </div>
   );
 }

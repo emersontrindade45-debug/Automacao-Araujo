@@ -30,7 +30,7 @@ export interface Cliente {
   proxima_origem?: string | null;
 }
 
-export type TipoProduto = "produto" | "kit" | "oferta";
+export type TipoProduto = "produto" | "kit" | "oferta" | "padaria";
 
 export interface Produto {
   id: string;

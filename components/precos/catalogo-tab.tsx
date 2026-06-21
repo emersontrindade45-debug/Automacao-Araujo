@@ -54,6 +54,7 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
   const [pending, startTransition] = useTransition();
   const [filtros, setFiltros] = useState<Filtros>(filtrosIniciais);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [ultimoSelecionadoId, setUltimoSelecionadoId] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -100,13 +101,31 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
     setFiltros(filtrosIniciais);
   }
 
-  function alternarSelecao(id: string) {
+  function alternarSelecao(id: string, shiftKey: boolean) {
+    if (shiftKey && ultimoSelecionadoId) {
+      const ids = filtrados.map((p) => p.id);
+      const i1 = ids.indexOf(ultimoSelecionadoId);
+      const i2 = ids.indexOf(id);
+      if (i1 !== -1 && i2 !== -1) {
+        const [inicio, fim] = i1 < i2 ? [i1, i2] : [i2, i1];
+        const intervalo = ids.slice(inicio, fim + 1);
+        setSelecionados((prev) => {
+          const novo = new Set(prev);
+          intervalo.forEach((itemId) => novo.add(itemId));
+          return novo;
+        });
+        setUltimoSelecionadoId(id);
+        return;
+      }
+    }
+
     setSelecionados((prev) => {
       const novo = new Set(prev);
       if (novo.has(id)) novo.delete(id);
       else novo.add(id);
       return novo;
     });
+    setUltimoSelecionadoId(id);
   }
 
   function alternarSelecionarTodos() {
@@ -319,7 +338,8 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
                       <input
                         type="checkbox"
                         checked={selecionados.has(produto.id)}
-                        onChange={() => alternarSelecao(produto.id)}
+                        onClick={(e) => { e.preventDefault(); alternarSelecao(produto.id, e.shiftKey); }}
+                        onChange={() => {}}
                         className="h-4 w-4 rounded border-border accent-brand cursor-pointer"
                         aria-label={`Selecionar ${produto.nome}`}
                       />

@@ -57,6 +57,7 @@ const VAZIO: Omit<Produto, "id" | "criado_em"> = {
 
 export function OfertasTable({ itens }: Props) {
   const [filtro, setFiltro] = useState<"todos" | "oferta" | "kit">("todos");
+  const [filtroAtivo, setFiltroAtivo] = useState<"" | "true" | "false">("");
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Produto>>({});
   const [criando, setCriando] = useState(false);
@@ -66,7 +67,11 @@ export function OfertasTable({ itens }: Props) {
   const [editPrecoTxt, setEditPrecoTxt] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  const visíveis = itens.filter((i) => filtro === "todos" || i.tipo === filtro);
+  const visíveis = itens.filter(
+    (i) =>
+      (filtro === "todos" || i.tipo === filtro) &&
+      (filtroAtivo === "" || String(i.ativo) === filtroAtivo)
+  );
 
   function iniciarEdicao(item: Produto) {
     setEditandoId(item.id);
@@ -132,7 +137,7 @@ export function OfertasTable({ itens }: Props) {
     <div className="space-y-4">
       {/* Filtros + botão novo */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {(["todos", "oferta", "kit"] as const).map((t) => (
             <button
               key={t}
@@ -147,6 +152,15 @@ export function OfertasTable({ itens }: Props) {
               {t === "todos" ? "Todos" : TIPO_LABEL[t]}
             </button>
           ))}
+          <select
+            value={filtroAtivo}
+            onChange={(e) => setFiltroAtivo(e.target.value as "" | "true" | "false")}
+            className="h-8 px-2 text-sm border border-border rounded-lg bg-surface text-foreground"
+          >
+            <option value="">Status</option>
+            <option value="true">Ativo</option>
+            <option value="false">Inativo</option>
+          </select>
         </div>
         <button
           onClick={() => { setCriando(true); setEditandoId(null); }}

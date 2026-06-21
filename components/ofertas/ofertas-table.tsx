@@ -187,6 +187,7 @@ export function OfertasTable({ itens, tipoFixo }: Props) {
 
   function salvarEdicao() {
     if (!editandoId) return;
+    const tipo = (editForm.tipo as TipoProduto) ?? "oferta";
     startTransition(async () => {
       await atualizarOfertaKitAction(editandoId, {
         nome: editForm.nome,
@@ -195,7 +196,9 @@ export function OfertasTable({ itens, tipoFixo }: Props) {
         descricao: editForm.descricao ?? null,
         validade: editForm.validade ?? null,
         ativo: editForm.ativo ?? true,
-        nicho: editForm.nicho ?? nichoPadrao(editForm.tipo ?? "oferta"),
+        tipo,
+        categoria: categoriaDoTipo(tipo),
+        nicho: editForm.nicho ?? nichoPadrao(tipo),
       });
       cancelarEdicao();
     });
@@ -483,12 +486,22 @@ export function OfertasTable({ itens, tipoFixo }: Props) {
                     </td>
                     <td className="px-4 py-2 hidden sm:table-cell">
                       <div className="flex flex-col gap-1">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${TIPO_BADGE[item.tipo]}`}>
-                          {TIPO_LABEL[item.tipo]}
-                        </span>
                         <select
                           className="border border-border rounded-md px-2 py-1 text-xs bg-surface"
-                          value={editForm.nicho ?? nichoPadrao(item.tipo)}
+                          value={editForm.tipo ?? item.tipo}
+                          onChange={(e) => {
+                            const tipo = e.target.value as TipoProduto;
+                            setEditForm({ ...editForm, tipo, nicho: nichoPadrao(tipo) });
+                          }}
+                          title="Mover item entre Ofertas, Kits ou Padaria"
+                        >
+                          <option value="oferta">Oferta</option>
+                          <option value="kit">Kit</option>
+                          <option value="padaria">Padaria</option>
+                        </select>
+                        <select
+                          className="border border-border rounded-md px-2 py-1 text-xs bg-surface"
+                          value={editForm.nicho ?? nichoPadrao(editForm.tipo ?? item.tipo)}
                           onChange={(e) => setEditForm({ ...editForm, nicho: e.target.value })}
                           title="Seção do site onde o item aparece"
                         >

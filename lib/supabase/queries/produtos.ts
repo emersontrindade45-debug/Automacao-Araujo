@@ -159,13 +159,22 @@ export async function upsertProdutosEmLote(linhas: LinhaPlanilha[]) {
   );
 }
 
+// PostgREST rejeita URLs muito longas — com centenas de UUIDs no filtro .in()
+// a query string excede o limite e retorna 400 Bad Request. Por isso o update
+// é dividido em lotes.
+const TAMANHO_LOTE_UPDATE = 100;
+
 export async function ativarDesativarEmLote(ids: string[], ativo: boolean) {
   if (ids.length === 0) return;
   const supabase = createAdminClient();
-  const { error } = await supabase
-    .from("produtos")
-    .update({ ativo })
-    .in("id", ids);
 
-  if (error) throw error;
+  for (let i = 0; i < ids.length; i += TAMANHO_LOTE_UPDATE) {
+    const lote = ids.slice(i, i + TAMANHO_LOTE_UPDATE);
+    const { error } = await supabase
+      .from("produtos")
+      .update({ ativo })
+      .in("id", lote);
+
+    if (error) throw error;
+  }
 }

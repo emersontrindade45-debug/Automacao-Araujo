@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import type { Produto, TipoProduto } from "@/lib/types";
 import {
   criarOfertaKitAction,
@@ -49,6 +49,22 @@ function parsePreco(v: string): number {
   return parseFloat(v.trim().replace(",", "."));
 }
 
+interface Filtros {
+  nome: string;
+  unidade: string;
+  precoMin: string;
+  precoMax: string;
+  ativo: "" | "true" | "false";
+}
+
+const filtrosIniciais: Filtros = {
+  nome: "",
+  unidade: "",
+  precoMin: "",
+  precoMax: "",
+  ativo: "",
+};
+
 const VAZIO: Omit<Produto, "id" | "criado_em"> = {
   nome: "",
   preco_atual: 0,
@@ -64,7 +80,7 @@ const VAZIO: Omit<Produto, "id" | "criado_em"> = {
 
 export function OfertasTable({ itens, tipoFixo }: Props) {
   const [filtro, setFiltro] = useState<"todos" | "oferta" | "kit" | "padaria">("todos");
-  const [filtroAtivo, setFiltroAtivo] = useState<"" | "true" | "false">("");
+  const [filtros, setFiltros] = useState<Filtros>(filtrosIniciais);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Produto>>({});
   const [criando, setCriando] = useState(false);
@@ -76,11 +92,30 @@ export function OfertasTable({ itens, tipoFixo }: Props) {
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [ultimoSelecionadoId, setUltimoSelecionadoId] = useState<string | null>(null);
 
-  const visíveis = itens.filter(
-    (i) =>
-      (tipoFixo ? i.tipo === tipoFixo : filtro === "todos" || i.tipo === filtro) &&
-      (filtroAtivo === "" || String(i.ativo) === filtroAtivo)
+  const unidades = useMemo(
+    () => Array.from(new Set(itens.map((i) => i.unidade))).sort(),
+    [itens]
   );
+
+  const visíveis = itens.filter((i) => {
+    if (tipoFixo ? i.tipo !== tipoFixo : filtro !== "todos" && i.tipo !== filtro) return false;
+    if (filtros.nome && !i.nome.toLowerCase().includes(filtros.nome.toLowerCase())) return false;
+    if (filtros.unidade && i.unidade !== filtros.unidade) return false;
+    if (filtros.precoMin !== "" && i.preco_atual < parsePreco(filtros.precoMin)) return false;
+    if (filtros.precoMax !== "" && i.preco_atual > parsePreco(filtros.precoMax)) return false;
+    if (filtros.ativo !== "" && String(i.ativo) !== filtros.ativo) return false;
+    return true;
+  });
+
+  function setFiltroCampo<K extends keyof Filtros>(key: K, value: Filtros[K]) {
+    setFiltros((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function limparFiltros() {
+    setFiltros(filtrosIniciais);
+  }
+
+  const temFiltroAtivo = Object.values(filtros).some((v) => v !== "");
 
   function alternarSelecao(id: string, shiftKey: boolean) {
     if (shiftKey && ultimoSelecionadoId) {
@@ -205,11 +240,14 @@ export function OfertasTable({ itens, tipoFixo }: Props) {
     });
   }
 
+  const inputCls = "h-8 w-full border border-border rounded-md px-2 text-xs bg-surface text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand";
+  const selectCls = "h-8 w-full border border-border rounded-md px-2 text-xs bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-brand";
+
   return (
     <div className="space-y-4">
       {/* Filtros + botão novo */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap flex-1">
           {!tipoFixo && (["todos", "oferta", "kit"] as const).map((t) => (
             <button
               key={t}
@@ -224,15 +262,64 @@ export function OfertasTable({ itens, tipoFixo }: Props) {
               {t === "todos" ? "Todos" : TIPO_LABEL[t]}
             </button>
           ))}
+          {/* Nome */}
+          <input
+            type="text"
+            placeholder="Buscar por nome..."
+            value={filtros.nome}
+            onChange={(e) => setFiltroCampo("nome", e.target.value)}
+            className={`${inputCls} min-w-40 max-w-56`}
+          />
+          {/* Unidade */}
           <select
-            value={filtroAtivo}
-            onChange={(e) => setFiltroAtivo(e.target.value as "" | "true" | "false")}
-            className="h-8 px-2 text-sm border border-border rounded-lg bg-surface text-foreground"
+            value={filtros.unidade}
+            onChange={(e) => setFiltroCampo("unidade", e.target.value)}
+            className={`${selectCls} w-32`}
+          >
+            <option value="">Unidade</option>
+            {unidades.map((u) => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+          </select>
+          {/* Preço */}
+          <div className="flex items-center gap-1">
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="Preço mín"
+              value={filtros.precoMin}
+              onChange={(e) => setFiltroCampo("precoMin", e.target.value)}
+              className={`${inputCls} w-24`}
+            />
+            <span className="text-xs text-muted">–</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="Preço máx"
+              value={filtros.precoMax}
+              onChange={(e) => setFiltroCampo("precoMax", e.target.value)}
+              className={`${inputCls} w-24`}
+            />
+          </div>
+          {/* Status */}
+          <select
+            value={filtros.ativo}
+            onChange={(e) => setFiltroCampo("ativo", e.target.value as Filtros["ativo"])}
+            className={`${selectCls} w-28`}
           >
             <option value="">Status</option>
             <option value="true">Ativo</option>
             <option value="false">Inativo</option>
           </select>
+          {/* Limpar */}
+          {temFiltroAtivo && (
+            <button
+              onClick={limparFiltros}
+              className="h-8 px-3 text-xs text-muted hover:text-foreground border border-border rounded-md bg-surface hover:bg-surface-subtle transition-colors"
+            >
+              Limpar
+            </button>
+          )}
         </div>
         <button
           onClick={() => { setCriando(true); setEditandoId(null); }}
@@ -245,7 +332,9 @@ export function OfertasTable({ itens, tipoFixo }: Props) {
         </button>
       </div>
 
-      <p className="text-xs text-muted">{visíveis.length} item{visíveis.length !== 1 ? "s" : ""}</p>
+      <p className="text-xs text-muted">
+        {temFiltroAtivo ? `${visíveis.length} de ${itens.filter((i) => (tipoFixo ? i.tipo === tipoFixo : true)).length}` : visíveis.length} item{visíveis.length !== 1 ? "s" : ""}
+      </p>
 
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <table className="w-full text-sm">
@@ -369,7 +458,7 @@ export function OfertasTable({ itens, tipoFixo }: Props) {
             {visíveis.length === 0 && !criando && (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center text-muted text-sm">
-                  Nenhum item encontrado.
+                  {temFiltroAtivo ? "Nenhum item corresponde aos filtros." : "Nenhum item encontrado."}
                 </td>
               </tr>
             )}

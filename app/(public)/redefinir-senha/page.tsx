@@ -22,10 +22,22 @@ export default function RedefinirSenhaPage() {
     async function init() {
       try {
         const search = typeof window !== "undefined" ? window.location.search : "";
+        const hash = typeof window !== "undefined" ? window.location.hash : "";
+
         if (search.includes("code=")) {
           const { error } = await supabase.auth.exchangeCodeForSession(search);
           if (!error) {
             window.history.replaceState({}, "", "/redefinir-senha");
+          }
+        } else if (hash.includes("access_token=")) {
+          const params = new URLSearchParams(hash.slice(1));
+          const access_token = params.get("access_token");
+          const refresh_token = params.get("refresh_token");
+          if (access_token && refresh_token) {
+            const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+            if (!error) {
+              window.history.replaceState({}, "", "/redefinir-senha");
+            }
           }
         }
 

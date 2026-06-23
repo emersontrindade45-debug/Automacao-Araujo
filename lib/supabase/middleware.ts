@@ -40,6 +40,7 @@ export async function updateSession(request: NextRequest) {
     pathname === "/" ||
     pathname === "/login" ||
     pathname === "/redefinir-senha" ||
+    pathname === "/aceitar-convite" ||
     pathname.startsWith("/api/");
 
   if (!user && !isPublicRoute) {

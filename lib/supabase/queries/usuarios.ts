@@ -25,9 +25,14 @@ export async function listarUsuarios(): Promise<UsuarioItem[]> {
 
 export async function convidarUsuario(email: string, nome: string, papel: Papel, redirectTo: string) {
   const supabase = createAdminClient();
-  const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
+  const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
     redirectTo,
     data: { nome, papel },
+  });
+  console.log("[convite] inviteUserByEmail resultado →", {
+    redirectTo,
+    actionLink: data?.user?.action_link ?? null,
+    error: error?.message ?? null,
   });
   if (error) throw error;
 }

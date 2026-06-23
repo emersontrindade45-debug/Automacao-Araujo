@@ -10,8 +10,11 @@ async function getRedirectBase(): Promise<string> {
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host");
   const proto = h.get("x-forwarded-proto") ?? "http";
-  if (host) return `${proto}://${host}`;
-  return process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
+  const base = host
+    ? `${proto}://${host}`
+    : process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
+  console.log("[convite] getRedirectBase →", { host, proto, base });
+  return base;
 }
 
 async function assertAdmin() {
@@ -34,7 +37,9 @@ export async function convidarUsuarioAction(formData: FormData) {
   if (!email || !nome) throw new Error("Email e nome são obrigatórios");
 
   const base = await getRedirectBase();
-  await convidarUsuario(email, nome, papel, `${base}/redefinir-senha`);
+  const redirectTo = `${base}/redefinir-senha`;
+  console.log("[convite] enviando convite →", { email, redirectTo });
+  await convidarUsuario(email, nome, papel, redirectTo);
 
   revalidatePath("/configuracoes/usuarios");
 }

@@ -55,6 +55,8 @@ supabase/.temp/
 .superpowers/
 *export_temp*
 n8n-skills/
+.agents/
+skills-lock.json
 
 # Temporary n8n workflow downloads
 n8n/workflows/fluxo*_current*.json

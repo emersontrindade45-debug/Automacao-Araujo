@@ -72,5 +72,6 @@ n8n/scripts/deploy-*.js
 # Dados de produtos (arquivos grandes e CSVs gerados)
 dados/*.xlsx
 dados/*.csv
+dados/*.log
 dados/__pycache__/
 dados/nomes_no_banco.txt

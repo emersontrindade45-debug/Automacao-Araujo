@@ -4,15 +4,30 @@ import type { Produto, TipoProduto } from "@/lib/types";
 
 const COLUNAS_PRODUTO = "id, nome, preco_atual, unidade, ativo, criado_em, tipo, descricao, validade, categoria, nicho, imagem_url";
 
+// O PostgREST limita cada resposta a 1000 linhas (max-rows). Com o catálogo do
+// ERP (27 mil+ produtos), um único select traria só os primeiros 1000 por nome.
+// Por isso buscamos em páginas de 1000 com .range() e concatenamos tudo.
+const TAMANHO_PAGINA = 1000;
+
 export async function getProdutos() {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("produtos")
-    .select(COLUNAS_PRODUTO)
-    .order("nome");
+  const todos: Produto[] = [];
 
-  if (error) throw error;
-  return data as Produto[];
+  for (let inicio = 0; ; inicio += TAMANHO_PAGINA) {
+    const { data, error } = await supabase
+      .from("produtos")
+      .select(COLUNAS_PRODUTO)
+      .order("nome")
+      .range(inicio, inicio + TAMANHO_PAGINA - 1);
+
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+
+    todos.push(...(data as Produto[]));
+    if (data.length < TAMANHO_PAGINA) break;
+  }
+
+  return todos;
 }
 
 export async function getProdutoById(id: string) {

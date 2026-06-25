@@ -73,5 +73,6 @@ n8n/scripts/deploy-*.js
 dados/*.xlsx
 dados/*.csv
 dados/*.log
+dados/*.json
 dados/__pycache__/
 dados/nomes_no_banco.txt

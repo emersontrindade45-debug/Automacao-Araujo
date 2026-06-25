@@ -43,6 +43,12 @@ const filtrosIniciais: Filtros = {
   ativo: "",
 };
 
+// Renderizar todos os produtos de uma vez (27 mil+ <tr>) trava o navegador.
+// Paginamos apenas a EXIBIÇÃO — os filtros e a seleção em massa continuam
+// operando sobre o conjunto inteiro. O download da planilha (outra tela)
+// segue trazendo todos os itens, independente da página visível aqui.
+const POR_PAGINA = 50;
+
 export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: CatalogoTabProps) {
   const [produtos, setProdutos] = useState<Produto[]>(inicial);
 
@@ -54,6 +60,7 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
   const [importarAberto, setImportarAberto] = useState(false);
   const [pending, startTransition] = useTransition();
   const [filtros, setFiltros] = useState<Filtros>(filtrosIniciais);
+  const [pagina, setPagina] = useState(1);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [ultimoSelecionadoId, setUltimoSelecionadoId] = useState<string | null>(null);
 
@@ -108,6 +115,22 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
   }, [produtos, filtros]);
 
   const temFiltroAtivo = Object.values(filtros).some((v) => v !== "");
+
+  // Paginação da exibição. Os filtros operam sobre `produtos` inteiro;
+  // só recortamos `filtrados` para a página atual ao renderizar a tabela.
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
+  const paginaAtual = Math.min(pagina, totalPaginas);
+  const inicioPagina = (paginaAtual - 1) * POR_PAGINA;
+  const visiveis = useMemo(
+    () => filtrados.slice(inicioPagina, inicioPagina + POR_PAGINA),
+    [filtrados, inicioPagina]
+  );
+
+  // Volta para a 1ª página sempre que o filtro mudar (senão a página atual
+  // pode ficar além do novo total de resultados).
+  useEffect(() => {
+    setPagina(1);
+  }, [filtros]);
 
   function setFiltro<K extends keyof Filtros>(key: K, value: Filtros[K]) {
     setFiltros((prev) => ({ ...prev, [key]: value }));
@@ -298,11 +321,20 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
         )}
       </div>
 
-      {temFiltroAtivo && (
-        <p className="text-xs text-muted">
-          {filtrados.length} de {produtos.length} produto{produtos.length !== 1 ? "s" : ""}
-        </p>
-      )}
+      <p className="text-xs text-muted">
+        {filtrados.length === 0 ? (
+          temFiltroAtivo ? "Nenhum produto corresponde aos filtros." : "Nenhum produto."
+        ) : (
+          <>
+            Exibindo{" "}
+            <span className="font-medium text-foreground">
+              {inicioPagina + 1}–{Math.min(inicioPagina + POR_PAGINA, filtrados.length)}
+            </span>{" "}
+            de {filtrados.length.toLocaleString("pt-BR")}
+            {temFiltroAtivo && ` (de ${produtos.length.toLocaleString("pt-BR")} no total)`}
+          </>
+        )}
+      </p>
 
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <table className="w-full text-sm table-fixed">
@@ -340,7 +372,7 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
                 </td>
               </tr>
             )}
-            {filtrados.map((produto) => {
+            {visiveis.map((produto) => {
               const emEdicao = editandoId === produto.id;
               const valoresEdicao = emEdicao ? editValues! : null;
               const precoInvalido = valoresEdicao !== null && (isNaN(parsePreco(valoresEdicao.preco_atual)) || parsePreco(valoresEdicao.preco_atual) < 0);
@@ -459,6 +491,44 @@ export function CatalogoTab({ produtos: inicial, somenteLeitura = false }: Catal
           </tbody>
         </table>
       </div>
+
+      {totalPaginas > 1 && (
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <p className="text-xs text-muted">
+            Página <span className="font-medium text-foreground">{paginaAtual}</span> de {totalPaginas.toLocaleString("pt-BR")}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPagina(1)}
+              disabled={paginaAtual === 1}
+              className="h-8 px-2.5 text-xs border border-border rounded-md bg-surface text-foreground hover:bg-surface-subtle disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              «
+            </button>
+            <button
+              onClick={() => setPagina((p) => Math.max(1, p - 1))}
+              disabled={paginaAtual === 1}
+              className="h-8 px-3 text-xs border border-border rounded-md bg-surface text-foreground hover:bg-surface-subtle disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Anterior
+            </button>
+            <button
+              onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+              disabled={paginaAtual === totalPaginas}
+              className="h-8 px-3 text-xs border border-border rounded-md bg-surface text-foreground hover:bg-surface-subtle disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Próxima
+            </button>
+            <button
+              onClick={() => setPagina(totalPaginas)}
+              disabled={paginaAtual === totalPaginas}
+              className="h-8 px-2.5 text-xs border border-border rounded-md bg-surface text-foreground hover:bg-surface-subtle disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              »
+            </button>
+          </div>
+        </div>
+      )}
 
       {!somenteLeitura && selecionados.size > 0 && (
         <div className="sticky bottom-0 flex items-center justify-between gap-3 px-4 py-3 bg-surface border border-border rounded-xl shadow-lg">

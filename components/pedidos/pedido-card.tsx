@@ -53,6 +53,11 @@ export function PedidoCard({ pedido, clienteNome }: PedidoCardProps) {
             <li key={i} className="flex items-center justify-between text-sm">
               <span className="text-muted truncate flex-1 mr-2">
                 {item.quantidade}× {item.nome}
+                {item.observacao?.trim() && (
+                  <span className="ml-1.5 text-[10px] font-medium text-brand" title={`Corte: ${item.observacao.trim()}`}>
+                    ✂ corte
+                  </span>
+                )}
               </span>
               <span className="text-foreground shrink-0">
                 {formatMoeda(item.quantidade * item.preco_unitario)}

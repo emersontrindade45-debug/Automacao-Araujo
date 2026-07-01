@@ -53,6 +53,8 @@ export interface ItemPedido {
   quantidade: number;
   preco_unitario: number;
   unidade?: string;
+  /** Observação de corte/preparo do item (ex.: "cortar em bife fino"), vinda do fechamento no WhatsApp. */
+  observacao?: string;
 }
 
 export interface Pedido {
